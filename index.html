@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Laboratórios de Graduação — UFG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">UFG</div>
+        <div class="brand-text">
+          <h1>Laboratórios de Ensino de Graduação</h1>
+          <p>Consulta de laboratórios e demandas de equipamentos · levantamento de 2024</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span id="meta-info" class="meta-info"></span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabbar" aria-label="Seções do painel">
+    <div class="tabbar-inner">
+      <div class="tablist" role="tablist" aria-label="Modo de consulta">
+        <button class="tab active" id="tabbtn-labs" role="tab" aria-selected="true"
+                aria-controls="tab-labs" data-tab="labs">
+          <span class="tab-title">Laboratórios</span>
+          <span class="tab-desc">Encontre laboratórios por critérios</span>
+        </button>
+        <button class="tab" id="tabbtn-equip" role="tab" aria-selected="false" tabindex="-1"
+                aria-controls="tab-equip" data-tab="equip">
+          <span class="tab-title">Equipamentos</span>
+          <span class="tab-desc">Busque equipamentos por critérios de lab. e de item</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main">
+    <!-- ===================== ABA LABORATORIOS ===================== -->
+    <section id="tab-labs" class="tab-panel active" role="tabpanel"
+             aria-labelledby="tabbtn-labs" tabindex="0">
+      <p class="intro">
+        Dados de um <strong>levantamento feito em 2024</strong> com os laboratórios de graduação.
+        Filtre à esquerda e clique numa linha para ver os equipamentos de cada laboratório.
+      </p>
+
+      <div class="layout">
+        <aside class="filters" aria-label="Filtros de laboratório">
+          <div class="filters-head">
+            <h2>Filtros</h2>
+            <button class="filters-toggle" type="button" aria-expanded="true"
+                    aria-controls="lab-filters">Filtros <span class="filters-toggle-arrow" aria-hidden="true">▴</span></button>
+            <button id="lab-limpar" class="btn-clear" type="button">Limpar tudo</button>
+          </div>
+          <div id="lab-filters" class="filters-body"></div>
+        </aside>
+
+        <div class="results">
+          <div class="results-head">
+            <div class="results-line" id="lab-summary"></div>
+            <span class="sort-hint" aria-hidden="true">↕ clique nos títulos para ordenar</span>
+          </div>
+          <div class="active-filters" id="lab-active" hidden aria-live="polite"></div>
+          <div class="table-card">
+            <div class="table-wrap">
+              <table id="lab-table">
+                <caption class="sr-only">Lista de laboratórios filtrados</caption>
+                <thead>
+                  <tr>
+                    <th data-sort="nome" aria-sort="ascending" data-tip="Nome do laboratório · clique para ordenar">Laboratório <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="unidade" aria-sort="none" data-tip="Unidade acadêmica · clique para ordenar">Unidade <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="area" aria-sort="none" data-tip="Grande área do conhecimento · clique para ordenar">Grande Área <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="localidade" aria-sort="none" data-tip="Campus / localidade · clique para ordenar">Localidade <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="qtdCursosProprios" aria-sort="none" class="num" data-tip="Cursos da própria unidade atendidos · clique para ordenar">Cursos da unidade <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="qtdCursosExternos" aria-sort="none" class="num" data-tip="Cursos de outras unidades atendidos · clique para ordenar">Cursos externos <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="discentes" aria-sort="none" class="num" data-tip="Alunos atendidos por semestre · clique para ordenar">Alunos / sem. <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="capacidade" aria-sort="none" class="num" data-tip="Capacidade máxima por turma prática · clique para ordenar">Capac. / turma <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="nEquip" aria-sort="none" class="num" data-tip="Quantidade de equipamentos listados · clique para ordenar">Equip. <span class="arrow" aria-hidden="true"></span></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ABA EQUIPAMENTOS ===================== -->
+    <section id="tab-equip" class="tab-panel" role="tabpanel"
+             aria-labelledby="tabbtn-equip" tabindex="0" hidden>
+      <p class="intro">
+        Equipamentos apontados pelos laboratórios no <strong>levantamento de 2024</strong>,
+        em dois tipos (existentes e novos). Filtre por critérios de laboratório e de
+        equipamento à esquerda e escolha o tipo em “Tipo de equipamento”.
+      </p>
+
+      <div class="layout">
+        <aside class="filters" aria-label="Filtros de equipamento">
+          <div class="filters-head">
+            <h2>Filtros</h2>
+            <button class="filters-toggle" type="button" aria-expanded="true"
+                    aria-controls="eq-filters">Filtros <span class="filters-toggle-arrow" aria-hidden="true">▴</span></button>
+            <button id="eq-limpar" class="btn-clear" type="button">Limpar tudo</button>
+          </div>
+          <div id="eq-filters" class="filters-body"></div>
+        </aside>
+
+        <div class="results">
+          <div class="results-head">
+            <span class="subtabs-label">Tipo de equipamento:</span>
+            <div class="subtabs" role="tablist" aria-label="Tipo de equipamento">
+              <button class="subtab active" id="subtab-existentes" role="tab" aria-selected="true"
+                      aria-controls="eq-panel" data-subtab="existentes">
+                Existentes
+                <span class="info pulse"
+                  aria-label="Um dos dois tipos de demanda do levantamento de 2024: equipamentos que o laboratório já tem, mas em quantidade insuficiente e precisa de mais unidades."
+                  data-tip="Um dos dois tipos de demanda do levantamento de 2024: equipamentos que o laboratório já tem, mas em quantidade insuficiente e precisa de mais unidades.">i</span>
+              </button>
+              <button class="subtab" id="subtab-novos" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="eq-panel" data-subtab="novos">
+                Novos (a adquirir)
+                <span class="info pulse"
+                  aria-label="O outro tipo de demanda do levantamento de 2024: equipamentos que o laboratório ainda não possui e deseja adquirir."
+                  data-tip="O outro tipo de demanda do levantamento de 2024: equipamentos que o laboratório ainda não possui e deseja adquirir.">i</span>
+              </button>
+            </div>
+            <div class="results-line" id="eq-summary"></div>
+            <span class="sort-hint" aria-hidden="true">↕ clique nos títulos para ordenar</span>
+          </div>
+          <div class="active-filters" id="eq-active" hidden aria-live="polite"></div>
+          <section id="eq-panel" role="tabpanel" aria-labelledby="subtab-existentes">
+            <div class="table-card">
+              <div class="table-wrap">
+                <table id="eq-table">
+                  <caption class="sr-only">Lista de equipamentos filtrados</caption>
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de detalhe do laboratório -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-box">
+      <button id="modal-close" class="modal-close" type="button" aria-label="Fechar detalhe">×</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading" role="status" aria-live="polite" aria-busy="true">Carregando dados…</div>
+
+  <script src="app.js"></script>
+</body>
+</html>
