@@ -524,7 +524,10 @@ tbody td a:hover { text-decoration: underline; }
 /* ---------------------------------------------------- responsive */
 /* === PC: max-width: 900px (regras originais, INTACTAS) === */
 @media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr; }
+  /* minmax(0, 1fr): permite a coluna encolher abaixo da largura do conteúdo.
+     Com '1fr' puro (= minmax(auto,1fr)) a tabela larga estoura a página inteira. */
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .results { min-width: 0; }
   .filters { position: static; max-height: none; }
   main { padding: 18px 16px 32px; }
   .topbar { padding: 14px 0; }
@@ -547,6 +550,7 @@ tbody td a:hover { text-decoration: underline; }
 
   /* topbar: alinha a meta-info à esquerda e força largura total ao quebrar */
   .topbar-inner { gap: 12px; }
+  .brand-text { min-width: 0; }   /* deixa o título quebrar linha em vez de estourar a barra */
   .meta-info { flex-basis: 100%; text-align: left; font-size: 11.5px; }
   .brand-text p { font-size: 12px; }
 
@@ -565,7 +569,7 @@ tbody td a:hover { text-decoration: underline; }
   .filters-toggle:hover { background: var(--surface-2); color: var(--brand); border-color: var(--accent); }
   .filters-toggle-arrow { font-size: 10px; line-height: 1; transition: transform .12s; }
 
-  .filters-head { padding: 12px 0 8px; gap: 8px; }
+  .filters-head { padding: 12px 0 8px; gap: 8px; flex-wrap: wrap; }
   .filters { padding: 0 14px 14px; }
   .filters.collapsed .filters-body { display: none; }
   .filters.collapsed { padding-bottom: 8px; }
@@ -584,9 +588,8 @@ tbody td a:hover { text-decoration: underline; }
   tbody td { padding: 8px 10px; }
   .table-wrap { max-height: calc(100vh - 220px); }
 
-  /* libera o scroll horizontal do .table-wrap (em PC o .table-card tem
-     overflow:hidden, o que clipa a tabela no mobile). Só em mobile, deixa visível. */
-  .table-card { overflow: visible; }
+  /* .table-card mantém overflow:hidden (base): o scroll horizontal acontece
+     dentro do .table-wrap (overflow:auto), sem empurrar a largura da página. */
 
   /* indicador de scroll horizontal: gradiente de sombra à direita.
      Aparece quando JS adiciona .has-overflow-right; some com scroll ou via JS. */
