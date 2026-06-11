@@ -16,6 +16,8 @@
   --good: #1c7a52;
   --good-soft: #e7f4ec;
   --warn: #b06a16;
+  --warn-soft: #f9efdd;
+  --bad: #b3261e;
   --shadow: 0 1px 2px rgba(20, 35, 60, .06), 0 4px 14px rgba(20, 35, 60, .06);
   --shadow-lg: 0 18px 48px rgba(15, 28, 48, .28);
   --radius: 12px;
@@ -315,6 +317,9 @@ main { padding: 22px 28px 40px; max-width: 1500px; margin: 0 auto; }
 }
 .btn-clear:hover { background: var(--surface-2); color: var(--brand); border-color: var(--accent); }
 
+/* Botão "Filtros ▾/▴" — visível SÓ em mobile (≤600px). Em desktop fica display:none. */
+.filters-toggle { display: none; }
+
 /* ---------------------------------------------------- results head */
 .results-head {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px;
@@ -444,6 +449,152 @@ tbody td a:hover { text-decoration: underline; }
   background: var(--brand-soft); color: var(--brand-2); font-weight: 700; vertical-align: middle;
 }
 .badge.lic { background: var(--good-soft); color: var(--good); }
+.badge.ok { background: var(--good-soft); color: var(--good); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.off { background: var(--surface-3); color: var(--muted); }
+.badge.tipo-novo { background: var(--accent-soft); color: var(--brand-2); }
+.badge.tipo-exist { background: var(--surface-3); color: var(--muted); }
+.badge.prio { background: var(--brand); color: #fff; }
+.badge.ajuste { background: var(--warn); color: #fff; }
+.badge.redist { background: var(--accent); color: #fff; }
+.badge.chk { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); }
+.badge[data-tip] { cursor: help; }
+
+/* ---------------------------------------------------- aba Distribuição */
+.budget-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.budget-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.budget-stat {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  text-align: center;
+}
+.budget-stat b {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--faint);
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.budget-stat span { font-size: 17px; font-weight: 700; color: var(--brand); font-variant-numeric: tabular-nums; }
+.budget-stat .money { color: var(--good); }
+.budget-stat .over { color: var(--bad); }
+.budget-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--line-strong);
+  overflow: hidden;
+}
+.budget-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--good), #2aa06e);
+  transition: width .25s;
+}
+.budget-fill.over { background: linear-gradient(90deg, var(--warn), var(--bad)); }
+
+.dist-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.btn-dist {
+  background: var(--surface); border: 1px solid var(--line-strong);
+  padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  font-weight: 600; font-size: 12.5px; color: var(--muted); font-family: inherit;
+  transition: all .12s;
+}
+.btn-dist:hover { background: var(--surface-2); color: var(--brand); border-color: var(--accent); }
+.btn-dist.primary { background: var(--brand-soft); color: var(--brand); border-color: var(--accent); }
+.btn-dist.primary:hover { background: var(--accent); color: #fff; }
+
+.dist-unit { margin-bottom: 18px; }
+.dist-unit-head {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 8px;
+}
+.dist-unit-head h3 { margin: 0; font-size: 14px; color: var(--brand); }
+.dist-unit-total { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--good); font-variant-numeric: tabular-nums; }
+.dist-unit .table-wrap { max-height: 480px; }
+.dist-table thead th, .dist-final thead th, .dist-nc thead th { cursor: default; }
+.dist-table thead th:hover, .dist-final thead th:hover, .dist-nc thead th:hover {
+  background: var(--surface-3); color: var(--brand);
+}
+
+/* visão Lista definitiva: ocupa a largura toda (sem sidebar de filtros) */
+.layout.dist-full { grid-template-columns: 1fr; }
+.dist-final .cell-clip { max-width: 380px; }
+.dist-total-row td {
+  font-weight: 700; color: var(--brand);
+  background: var(--surface-3); border-top: 2px solid var(--line-strong);
+}
+.dist-final-h {
+  color: var(--brand); font-size: 15px; margin: 22px 0 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.dist-cursos {
+  margin-top: 14px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 18px;
+}
+.dist-cursos summary {
+  cursor: pointer; font-size: 13.5px; color: var(--ink); font-weight: 600;
+}
+.dist-cursos summary:hover { color: var(--brand-2); }
+.dist-cursos ul {
+  margin: 12px 0 0; padding-left: 20px;
+  columns: 3 260px; column-gap: 28px; font-size: 13px;
+}
+.dist-cursos li { margin-bottom: 4px; break-inside: avoid; }
+.dist-note-inline { color: var(--muted); font-size: 12.5px; font-style: italic; margin: 10px 2px 0; }
+.dist-sel-col { width: 36px; min-width: 36px; }
+.dist-sel-cell { text-align: center; }
+.dist-check { width: 16px; height: 16px; accent-color: var(--good); cursor: pointer; margin: 2px 0 0; }
+tr.dist-sel { background: var(--good-soft); }
+tr.dist-off td { color: var(--faint); }
+tr.dist-off td a { color: var(--faint); }
+.tag-off {
+  display: inline-block; margin-left: 6px; font-size: 10.5px; padding: 1px 7px;
+  border-radius: 999px; background: var(--surface-3); color: var(--muted);
+  font-weight: 600; white-space: nowrap; vertical-align: middle; cursor: help;
+}
+.tag-vetado { background: #fde8e8; color: #b91c1c; border: 1px solid #f87171; }
+.dist-note {
+  margin: 0; color: var(--muted); font-style: italic; font-size: 13px;
+  padding: 12px 14px; background: var(--surface);
+  border: 1px dashed var(--line-strong); border-radius: var(--radius-sm);
+}
+
+/* card "Como esta lista foi montada" (metodologia + legenda dos selos) */
+.dist-method {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--accent); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 16px 20px; margin-bottom: 18px;
+}
+.dist-method h3 { margin: 0 0 10px; font-size: 14px; color: var(--brand); }
+.dist-method ul { margin: 0; padding-left: 20px; }
+.dist-method li { font-size: 13px; color: var(--ink); margin-bottom: 7px; line-height: 1.5; }
+.dist-method li:last-child { margin-bottom: 0; }
+.dist-legenda {
+  margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line);
+  font-size: 12.5px; color: var(--muted); line-height: 2;
+}
+.dist-legenda .badge { margin: 0 2px; }
+
+/* tabela de unidades não atendidas: coluna de motivo ocupa o resto da largura */
+.dist-nc-motivo { color: var(--muted); font-size: 12.5px; line-height: 1.5; min-width: 320px; }
 
 /* ---------------------------------------------------- modal */
 .modal {
@@ -519,8 +670,12 @@ tbody td a:hover { text-decoration: underline; }
 .course-list li { margin-bottom: 2px; }
 
 /* ---------------------------------------------------- responsive */
+/* === PC: max-width: 900px (regras originais, INTACTAS) === */
 @media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr; }
+  /* minmax(0, 1fr): permite a coluna encolher abaixo da largura do conteúdo.
+     Com '1fr' puro (= minmax(auto,1fr)) a tabela larga estoura a página inteira. */
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .results { min-width: 0; }
   .filters { position: static; max-height: none; }
   main { padding: 18px 16px 32px; }
   .topbar { padding: 14px 0; }
@@ -531,8 +686,111 @@ tbody td a:hover { text-decoration: underline; }
   .sort-hint { display: none; }
 }
 
+/* === mobile: max-width: 600px (regras originais + ajustes responsivos) === */
 @media (max-width: 600px) {
+  /* regra original preservada */
   .modal-stat-grid { grid-template-columns: 1fr 1fr; }
+
+  /* tabbar: esconde a descrição secundária das abas para deixar a tabbar compacta */
+  .tab .tab-desc { display: none; }
+  .tab { padding: 12px 14px 10px; }
+  .tabbar { box-shadow: none; }
+
+  /* topbar: alinha a meta-info à esquerda e força largura total ao quebrar */
+  .topbar-inner { gap: 12px; }
+  .brand-text { min-width: 0; }   /* deixa o título quebrar linha em vez de estourar a barra */
+  .meta-info { flex-basis: 100%; text-align: left; font-size: 11.5px; }
+  .brand-text p { font-size: 12px; }
+
+  /* intro */
+  .intro { font-size: 13px; }
+
+  /* filtros: botão de toggle visível, com classe .collapsed esconde o body */
+  .filters-toggle {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: none; border: 1px solid var(--line-strong);
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    font-weight: 600; font-size: 12.5px; color: var(--muted);
+    font-family: inherit; margin-left: auto;
+    transition: all .12s;
+  }
+  .filters-toggle:hover { background: var(--surface-2); color: var(--brand); border-color: var(--accent); }
+  .filters-toggle-arrow { font-size: 10px; line-height: 1; transition: transform .12s; }
+
+  .filters-head { padding: 12px 0 8px; gap: 8px; flex-wrap: wrap; }
+  .filters { padding: 0 14px 14px; }
+  .filters.collapsed .filters-body { display: none; }
+  .filters.collapsed { padding-bottom: 8px; }
+  .field { margin-bottom: 12px; }
+
+  /* botão de limpar: alvo de toque maior (só mobile) */
+  .btn-clear { padding: 8px 14px; }
+
+  /* chips de filtros ativos: alvo de toque maior (só mobile) */
+  .af-chip { padding: 6px 8px 6px 14px; }
+  .active-filters { padding: 9px 12px; }
+
+  /* tabela: fonte/padding menores; indica scroll horizontal via gradiente */
+  table { font-size: 12.5px; }
+  thead th { padding: 9px 10px; font-size: 11px; }
+  tbody td { padding: 8px 10px; }
+  .table-wrap { max-height: calc(100vh - 220px); }
+
+  /* .table-card mantém overflow:hidden (base): o scroll horizontal acontece
+     dentro do .table-wrap (overflow:auto), sem empurrar a largura da página. */
+
+  /* indicador de scroll horizontal: gradiente de sombra à direita.
+     Aparece quando JS adiciona .has-overflow-right; some com scroll ou via JS. */
+  .table-wrap.has-overflow-right {
+    background:
+      linear-gradient(to right, transparent calc(100% - 24px), var(--surface) 100%),
+      linear-gradient(to right, rgba(20, 35, 60, .08) 0, rgba(20, 35, 60, .18) 60%, transparent 100%) right center / 24px 100% no-repeat;
+  }
+
+  /* modal: menos padding, cabe em mobile */
+  .modal { padding: 16px 12px; }
+  .modal-box { padding: 18px 16px; }
+  .modal .active-filters { padding: 9px 12px; }
+  .modal h2 { font-size: 19px; padding-right: 32px; }
+  .modal h3 { font-size: 13.5px; }
+  .modal-stat { padding: 10px 12px; }
+  .modal-stat span { font-size: 16px; }
+}
+
+/* === mobile pequeno: max-width: 480px (refinamentos extras) === */
+@media (max-width: 480px) {
+  .brand-mark { width: 40px; height: 40px; font-size: 13px; }
+  .brand-text h1 { font-size: 16.5px; }
+  .brand-text p { font-size: 11.5px; }
+
+  /* modal: títulos menores */
+  .modal h2 { font-size: 18px; }
+
+  /* subabas (Existentes / Novos) */
+  .subtab { padding: 6px 12px; font-size: 12.5px; }
+  .subtabs-label { display: none; }
+
+  /* slider duplo: mais respiro para os thumbs em tela muito estreita */
+  .rc-slider { margin: 0 4px 8px; }
+  .rc-fields { gap: 6px; }
+
+  /* tabela: paddings ainda menores */
+  thead th { padding: 8px 9px; }
+  tbody td { padding: 7px 9px; }
+  thead th { font-size: 10.5px; }
+
+  /* modal-stat: duas colunas em vez de empilhado */
+  .modal-stat-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* === mobile muito pequeno: max-width: 380px (pior caso: ~320px) === */
+@media (max-width: 380px) {
+  table { font-size: 12px; }
+  thead th { padding: 7px 8px; font-size: 10px; }
+  tbody td { padding: 6px 8px; }
+  .meta-info { font-size: 11px; }
+  .modal-stat { padding: 8px 10px; }
+  .modal-stat span { font-size: 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

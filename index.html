@@ -40,6 +40,11 @@
           <span class="tab-title">Equipamentos</span>
           <span class="tab-desc">Busque equipamentos por critérios de lab. e de item</span>
         </button>
+        <button class="tab" id="tabbtn-dist" role="tab" aria-selected="false" tabindex="-1"
+                aria-controls="tab-dist" data-tab="dist">
+          <span class="tab-title">Distribuição R$ 1,2 mi</span>
+          <span class="tab-desc">Proposta de 1 equipamento por unidade acadêmica</span>
+        </button>
       </div>
     </div>
   </nav>
@@ -57,6 +62,8 @@
         <aside class="filters" aria-label="Filtros de laboratório">
           <div class="filters-head">
             <h2>Filtros</h2>
+            <button class="filters-toggle" type="button" aria-expanded="true"
+                    aria-controls="lab-filters">Filtros <span class="filters-toggle-arrow" aria-hidden="true">▴</span></button>
             <button id="lab-limpar" class="btn-clear" type="button">Limpar tudo</button>
           </div>
           <div id="lab-filters" class="filters-body"></div>
@@ -106,6 +113,8 @@
         <aside class="filters" aria-label="Filtros de equipamento">
           <div class="filters-head">
             <h2>Filtros</h2>
+            <button class="filters-toggle" type="button" aria-expanded="true"
+                    aria-controls="eq-filters">Filtros <span class="filters-toggle-arrow" aria-hidden="true">▴</span></button>
             <button id="eq-limpar" class="btn-clear" type="button">Limpar tudo</button>
           </div>
           <div id="eq-filters" class="filters-body"></div>
@@ -145,6 +154,54 @@
               </div>
             </div>
           </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ABA DISTRIBUIÇÃO ===================== -->
+    <section id="tab-dist" class="tab-panel" role="tabpanel"
+             aria-labelledby="tabbtn-dist" tabindex="0" hidden>
+      <p class="intro">
+        Distribuição de <strong>R$ 1.200.000</strong>: apoio a <strong>um laboratório em cada
+        unidade acadêmica</strong>, com equipamento (novo ou existente) de quantidade solicitada
+        igual a 1 e custo total a partir de R$ 20 mil. Dentro de cada unidade tem prioridade o
+        laboratório que <strong>atende licenciatura</strong>, depois o de <strong>mais
+        alunos</strong>, <strong>mais cursos</strong> e <strong>mais cursos de outras
+        unidades</strong>. A visão <strong>Lista definitiva</strong> traz a metodologia e separa
+        as <strong>unidades atendidas</strong> das <strong>não atendidas</strong> (com o motivo de
+        cada uma); em <strong>Ajustar seleção</strong> é possível marcar e desmarcar itens (a
+        seleção fica salva neste navegador).
+      </p>
+
+      <div class="layout" id="dist-layout">
+        <aside class="filters" id="dist-aside" aria-label="Filtros da distribuição">
+          <div class="filters-head">
+            <h2>Filtros</h2>
+            <button class="filters-toggle" type="button" aria-expanded="true"
+                    aria-controls="dist-filters">Filtros <span class="filters-toggle-arrow" aria-hidden="true">▴</span></button>
+            <button id="dist-limpar" class="btn-clear" type="button">Limpar tudo</button>
+          </div>
+          <div id="dist-filters" class="filters-body"></div>
+        </aside>
+
+        <div class="results">
+          <div class="results-head">
+            <span class="subtabs-label">Visão:</span>
+            <div class="subtabs" role="tablist" aria-label="Visão da distribuição">
+              <button class="subtab active" id="distview-final" role="tab" aria-selected="true"
+                      aria-controls="dist-groups" data-distview="final">Lista definitiva</button>
+              <button class="subtab" id="distview-ajustar" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="dist-groups" data-distview="ajustar">Ajustar seleção</button>
+            </div>
+          </div>
+          <div id="dist-budget" class="budget-card" aria-live="polite"></div>
+          <div class="dist-actions">
+            <button id="dist-sugerir" class="btn-dist" type="button">↺ Restaurar proposta</button>
+            <button id="dist-desmarcar" class="btn-dist" type="button">Desmarcar tudo</button>
+            <button id="dist-exportar" class="btn-dist primary" type="button">⬇ Exportar seleção (CSV)</button>
+          </div>
+          <div class="active-filters" id="dist-active" hidden aria-live="polite"></div>
+          <div id="dist-groups"></div>
         </div>
       </div>
     </section>
