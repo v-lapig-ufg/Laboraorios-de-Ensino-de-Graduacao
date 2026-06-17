@@ -1387,19 +1387,6 @@ function discValid(l) {
   return c > 0 ? Math.min(d, c * DIST_FATOR_TURMAS) : d;
 }
 
-/* verdito de consistência entre alunos/semestre e capacidade por turma.
-   Devolve null quando está coerente, ou um aviso curto a exibir/checar. */
-function consistenciaDiscentes(l) {
-  const d = l.discentes || 0, c = l.capacidade || 0;
-  if (d === 0 && c > 0) {
-    return `Informa 0 alunos/semestre apesar de ter capacidade para ${fmtNum(c)} por turma — número provavelmente não preenchido.`;
-  }
-  if (c > 0 && d > c * DIST_FATOR_TURMAS) {
-    return `Os ${fmtNum(d)} alunos/semestre equivalem a ${Math.round(d / c)} turmas cheias (capacidade ${fmtNum(c)}/turma), bem acima do plausível — confira se o número está correto.`;
-  }
-  return null;
-}
-
 /* critérios de prioridade entre laboratórios de uma mesma unidade, nesta ordem:
    1º atende licenciatura; 2º mais alunos/semestre (validado); 3º mais cursos
    atendidos; 4º mais cursos de outras unidades. Devolve > 0 se "a" > "b". */
@@ -1696,7 +1683,6 @@ function distMetodologiaCard() {
     `<li><strong>Qual item dentro do laboratório:</strong> o de <strong>maior valor dentro do teto</strong>, para que a verba seja usada em equipamentos de maior porte e o gasto total se aproxime dos R$ 1,35 milhão.</li>` +
     `<li><strong>Ajustes manuais:</strong> quando o item escolhido automaticamente não se enquadra no edital (veículo, pacote multi-equipamento etc.), ele é trocado à mão. Há <strong>${fmtNum(nManuais)} ajustes</strong>, marcados com o selo <span class="badge ajuste">ajuste manual</span> — passe o mouse sobre o selo para ver o motivo.</li>` +
     `<li><strong>Redistribuição da sobra:</strong> após a proposta base (1 item por unidade), <strong>${fmtNum(DIST_REDIST_OVERRIDES.length)} equipamentos essenciais</strong> foram escolhidos manualmente para unidades subatendidas, com base no impacto pedagógico — não apenas no valor, mas na relevância para a graduação. Cada item tem um motivo registrado (passe o mouse sobre o selo <span class="badge redist">redistribuição</span>). Essas unidades — incluindo as de maior público em ciências básicas, como <strong>ICB, FF, IQ e IPTSP</strong> — passam a contar com um <strong>2º equipamento</strong>.</li>` +
-    `<li><strong>Equipamento caro tem que servir muitos alunos — com o dado conferido:</strong> como o levantamento traz inconsistências, o número de alunos é <strong>conferido contra a capacidade por turma</strong>: um valor implausível não ganha prioridade e recebe o selo <span class="badge chk">conferir alunos</span>.</li>` +
     `<li><strong>Quem fica de fora:</strong> unidades sem nenhum item dentro desses critérios, ou barradas na análise (por exemplo, valor irreal ou só itens acima do teto), aparecem na lista de <strong>não atendidas</strong> ao final, com o motivo de cada uma.</li>` +
     `</ul>` +
     `<p class="dist-legenda"><strong>Legenda dos selos:</strong> ` +
@@ -1704,7 +1690,6 @@ function distMetodologiaCard() {
     `<span class="badge prio">prioritário</span> laboratório priorizado pelos critérios acima · ` +
     `<span class="badge ajuste">ajuste manual</span> item revisado/trocado manualmente · ` +
     `<span class="badge redist">redistribuição</span> item adicionado pela redistribuição da sobra · ` +
-    `<span class="badge chk">conferir alunos</span> alunos/semestre destoa da capacidade — confira o dado · ` +
     `<span class="badge tipo-novo">novo</span> equipamento que o laboratório ainda não tem · ` +
     `<span class="badge tipo-exist">existente</span> mais unidades de um que ele já possui.</p>`;
   return card;
@@ -1729,7 +1714,6 @@ function distTabelaConfirmados(itens, totalUnidades) {
     const ehPrio = distPrioLab.get(it.lab.unidade) === it.lab.id;
     const ajuste = DIST_AJUSTES[it.key];
     const ehRedist = distRedist.has(it.key);
-    const inconsist = consistenciaDiscentes(it.lab);
     const tr = el("tr");
     tr.innerHTML =
       `<td><strong>${esc(it.lab.unidade)}</strong></td>` +
@@ -1740,8 +1724,7 @@ function distTabelaConfirmados(itens, totalUnidades) {
       (ehRedist ? ` <span class="badge redist" data-tip="${esc(redistMotivo(it.key))}">redistribuição</span>` : "") + `</td>` +
       `<td>${esc(it.e.nome)} <span class="badge tipo-${it.tipo === "novo" ? "novo" : "exist"}">${it.tipo}</span></td>` +
       `<td class="num">${fmtBRL(it.e.valor)}</td>` +
-      `<td class="num">${fmtNum(it.lab.discentes)}` +
-      (inconsist ? ` <span class="badge chk" data-tip="${esc(inconsist)}">conferir</span>` : "") + `</td>` +
+      `<td class="num">${fmtNum(it.lab.discentes)}</td>` +
       `<td class="num"><span data-tip="${esc(`${fmtNum(it.lab.qtdCursosProprios)} da própria unidade + ${fmtNum(it.lab.qtdCursosExternos)} de outras unidades`)}">${fmtNum(cursos)}</span></td>` +
       `<td class="cell-clip">${cellText(it.e.descricao)}</td>` +
       `<td class="cell-clip">${cellText(it.e.comentarios)}</td>`;

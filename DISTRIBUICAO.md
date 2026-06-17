@@ -165,11 +165,11 @@ a regra "equipamento caro deve servir muitos alunos" depende desse número, ele 
   - `discentes === 0` → continua **0** (não ganha prioridade);
   - senão, limitado a `capacidade × DIST_FATOR_TURMAS` (=25 turmas/semestre);
   - **o número EXIBIDO nas tabelas continua sendo o bruto** (`lab.discentes`).
-- **`consistenciaDiscentes(lab)`** — devolve `null` se coerente, ou um aviso curto
-  quando: (a) 0 alunos com capacidade > 0; ou (b) alunos > `capacidade × 25`.
-  O aviso vira o selo **"conferir alunos"** (`.badge.chk`) na coluna Alunos/sem.
-- **Coluna "≈ custo / aluno-sem."** foi removida da tabela em v12 para evitar
-  confusão. O número de alunos conferidos continua exposto via selo "conferir alunos".
+- **Selo "conferir alunos" removido da UI:** a coluna Alunos/sem. mostra só o número
+  bruto informado (`lab.discentes`), sem selo de consistência; a captação
+  `discValid(lab)` para o ranqueamento permanece (acima). A função
+  `consistenciaDiscentes` foi removida junto com o selo.
+- **Coluna "≈ custo / aluno-sem."** foi removida da tabela em v12 para evitar confusão.
 
 > `DIST_FATOR_TURMAS` é um parâmetro de julgamento (quantas turmas/semestre são
 > plausíveis num mesmo laboratório). Ajustável; documentar se mudar.
@@ -238,7 +238,7 @@ Ordem dos blocos em `renderDistFinal()`:
 1. **Card de metodologia** (`distMetodologiaCard`) — sempre visível.
 2. **Unidades atendidas** — tabela única (`distTabelaConfirmados`) com colunas:
    Unidade · Laboratório (+ selos) · Equipamento (+ tipo) · Custo total ·
-   Alunos/sem. (+ selo "conferir") · Cursos · Descrição · Comentários · linha de **Total**.
+   Alunos/sem. · Cursos · Descrição · Comentários · linha de **Total**.
 3. **Cursos de graduação atendidos** — `<details>` expansível.
 4. **Unidades não atendidas** — tabela ordenada por categoria (`distNaoAtendida`):
    `rank 0` "Avaliada e não atendida" (decisão registrada ou só itens acima do
@@ -252,7 +252,6 @@ Ordem dos blocos em `renderDistFinal()`:
 | prioritário | `.badge.prio` | lab priorizado pelos critérios (`distPrioLab`) |
 | ajuste manual | `.badge.ajuste` | item trocado à mão (`DIST_MANUAIS`); tooltip = motivo |
 | redistribuição | `.badge.redist` | item adicionado pela redistribuição do saldo da verba |
-| conferir alunos | `.badge.chk` | alunos/sem. destoa da capacidade (§4); tooltip = detalhe |
 | novo / existente | `.badge.tipo-*` | tipo do equipamento |
 | vetado | `.tag-off.tag-vetado` | item excluído da seleção automática (veículo, pacote ou placeholder); tooltip = motivo |
 
@@ -360,7 +359,8 @@ atendidas, Laboratórios, Cursos e "Atendimentos de alunos/sem." (rotulado
   não é equipamento autônomo. Substituída pelo microscópio petrográfico (IESA) e pela
   prensa de cisalhamento (EECA) para melhor aproveitamento da verba.
 - **Coluna custo/aluno removida (v12):** a coluna "≈ Custo / aluno-sem." foi removida
-  da tabela para evitar confusão. A informação de alunos conferidos permanece via selo.
+  da tabela para evitar confusão (o selo "conferir alunos" também foi removido da UI;
+  a coluna Alunos/sem. mostra só o número bruto informado).
 
 ### Limitação conhecida (em aberto para decisão do usuário)
 A regra "item de maior valor por lab", **sozinha**, às vezes coloca os itens mais
