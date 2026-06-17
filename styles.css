@@ -18,6 +18,7 @@
   --warn: #b06a16;
   --warn-soft: #f9efdd;
   --bad: #b3261e;
+  --bad-soft: #fbe7e6;
   --shadow: 0 1px 2px rgba(20, 35, 60, .06), 0 4px 14px rgba(20, 35, 60, .06);
   --shadow-lg: 0 18px 48px rgba(15, 28, 48, .28);
   --radius: 12px;
@@ -114,6 +115,26 @@ body {
 .tab:hover { color: var(--brand-2); }
 .tab.active { color: var(--brand); border-bottom-color: var(--accent); }
 .tab.active .tab-desc { color: var(--muted); }
+
+/* aba em destaque (Distribuição) — chama a atenção sem destoar do tema */
+.tab-featured { border-top-left-radius: 8px; border-top-right-radius: 8px; }
+.tab-featured .tab-title { color: var(--accent); font-weight: 700; }
+.tab-featured:hover .tab-title { color: var(--brand); }
+.tab-featured.active .tab-title { color: var(--brand); }
+.tab-badge {
+  display: inline-block; vertical-align: middle; margin-left: 7px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; color: #fff; line-height: 1.4;
+  background: linear-gradient(90deg, var(--brand-2), var(--accent));
+  box-shadow: 0 1px 4px rgba(43, 120, 184, .4);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tab-badge { animation: badge-pulse 2.6s ease-in-out infinite; }
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 1px 4px rgba(43, 120, 184, .4); }
+    50% { box-shadow: 0 1px 4px rgba(43, 120, 184, .4), 0 0 0 4px rgba(43, 120, 184, .12); }
+  }
+}
 
 /* ---------------------------------------------------- panels / layout */
 main { padding: 22px 28px 40px; max-width: 1500px; margin: 0 auto; }
@@ -330,6 +351,17 @@ main { padding: 22px 28px 40px; max-width: 1500px; margin: 0 auto; }
 .results-line .accent { color: var(--good); font-weight: 700; }
 .sort-hint { margin-left: auto; font-size: 11.5px; color: var(--faint); }
 
+/* botão de exportar (CSV) — disponível em cada aba de dados */
+.btn-export {
+  margin-left: 12px; display: inline-flex; align-items: center; gap: 5px;
+  background: var(--brand-soft); border: 1px solid var(--accent);
+  color: var(--brand); padding: 6px 13px; border-radius: 999px; white-space: nowrap;
+  font-weight: 600; font-size: 12.5px; font-family: inherit; cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.btn-export:hover { background: var(--accent); color: #fff; }
+.btn-export:focus-visible { outline: none; box-shadow: var(--focus); }
+
 /* subtabs como seletor segmentado (deixa claro que é preciso escolher um) */
 .subtabs-label { font-size: 12px; font-weight: 700; color: var(--brand-2); margin-right: 2px; }
 .subtabs {
@@ -458,7 +490,67 @@ tbody td a:hover { text-decoration: underline; }
 .badge.ajuste { background: var(--warn); color: #fff; }
 .badge.redist { background: var(--accent); color: #fff; }
 .badge.chk { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); }
+.badge.bad { background: var(--bad-soft); color: var(--bad); }
 .badge[data-tip] { cursor: help; }
+
+/* ---------------------------------------------------- aba Infraestrutura */
+th.ctr, td.ctr { text-align: center; }
+.risco { font-weight: 700; font-variant-numeric: tabular-nums; }
+.risco.ok { color: var(--good); }
+.risco.warn { color: var(--warn); }
+.risco.bad { color: var(--bad); }
+
+.nota-pill {
+  display: inline-block; min-width: 42px; text-align: center; white-space: nowrap;
+  font-weight: 800; font-variant-numeric: tabular-nums;
+  font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid transparent;
+}
+.nota-pill.na { font-weight: 700; font-size: 10.5px; }
+.nota-pill.ok { background: var(--good-soft); color: var(--good); border-color: #bfe3cd; }
+.nota-pill.warn { background: var(--warn-soft); color: var(--warn); border-color: #ecd6ad; }
+.nota-pill.bad { background: var(--bad-soft); color: var(--bad); border-color: #f0c4c1; }
+.nota-pill.na { background: var(--surface-3); color: var(--faint); cursor: help; }
+
+/* card da Nota e seções do dossiê no modal */
+.nota-card {
+  display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px 16px; margin: 6px 0 4px;
+}
+.nota-score { text-align: center; min-width: 110px; }
+.nota-score .big {
+  font-size: 38px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.nota-score .big.ok { color: var(--good); }
+.nota-score .big.warn { color: var(--warn); }
+.nota-score .big.bad { color: var(--bad); }
+.nota-score .scale { font-size: 11px; color: var(--muted); }
+.nota-score .media { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.nota-detail { flex: 1 1 320px; min-width: 260px; }
+.nota-detail h4 { margin: 0 0 6px; font-size: 12.5px; color: var(--brand-2); }
+table.nota-breakdown { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.nota-breakdown td { padding: 3px 6px; border-bottom: 1px solid var(--line); }
+table.nota-breakdown td.pen { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.nota-breakdown tr.on td { color: var(--ink); }
+table.nota-breakdown tr.on td.pen { color: var(--bad); font-weight: 700; }
+table.nota-breakdown tr.off td { color: var(--faint); }
+table.nota-breakdown tr.total td { border-top: 2px solid var(--line-strong); border-bottom: none; font-weight: 700; padding-top: 6px; }
+.nota-na { color: var(--muted); font-style: italic; }
+
+.lab-section { margin-top: 14px; }
+.lab-section > h4 {
+  margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--brand-2); border-bottom: 1px solid var(--line); padding-bottom: 4px;
+}
+.infra-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px 18px;
+}
+.infra-grid > div { font-size: 13px; }
+.infra-grid b { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 1px; }
+.infra-desc { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+.infra-desc b { color: var(--brand-2); }
 
 /* ---------------------------------------------------- aba Distribuição */
 .budget-card {

@@ -14,6 +14,14 @@ let labControls = [];            // controles da aba Laboratórios
 let eqLabControls = [];          // controles "critérios do laboratório" (aba Equip.)
 let eqItemControls = [];         // controles "critérios do equipamento" (aba Equip.)
 let distControls = [];           // controles da aba Distribuição
+let infraControls = [];          // controles da aba Infraestrutura
+let infraView = "instalacoes";   // visão ativa da aba Infraestrutura
+const infraSort = { key: "nota", dir: 1 };  // pior nota no topo (default de Instalações)
+let softLabControls = [];        // controles "critérios do laboratório" (aba Softwares)
+let softItemControls = [];       // controles "critérios do software" (aba Softwares)
+let softSubtab = "existentes";   // existentes | novos
+const softSort = { key: "valor", dir: -1 };
+let swPorLab = {};               // labId -> { existentes:[], novos:[] }
 
 /* aba Distribuição: verba a repartir entre as unidades acadêmicas */
 const DIST_VERBA = 1350000;      // verba total
@@ -23,7 +31,7 @@ const DIST_FATOR_TURMAS = 25;    // máx. de "turmas/semestre" plausível p/ val
 const DIST_REDIST_MAX = 10;       // máx. de itens na redistribuição da sobra (reserva)
 const DIST_REDIST_MIN = 25000;     // valor mínimo para um item ser candidato à redistribuição (reserva)
 const DIST_REDIST_TETO = 150000;   // valor máximo para um item da redistribuição (reserva)
-const DIST_LS = "distSelecao.v15";// chave do localStorage com a seleção (v15: FF leitor de placas + EA centrífuga de alimentos)
+const DIST_LS = "distSelecao.v16";// chave do localStorage com a seleção (v16: força recarga após correção do data.json — leitura das colunas 2.8.E/2.9.E dos equipamentos existentes, que o passo 3 lia desalinhadas; proposta volta a 29 itens / R$ 1.344.548)
 let distItems = [];              // novos + existentes anotados { e, lab, key, tipo, qtd, elegivel }
 let distPorUnidade = new Map();  // unidade -> [itens]
 let distPrioLab = new Map();     // unidade -> labId prioritário (critérios da distribuição)
@@ -183,6 +191,7 @@ const LAB_COLS = [
   { key: "discentes", label: "Alunos / sem.", cls: "num" },
   { key: "capacidade", label: "Capac. / turma", cls: "num" },
   { key: "nEquip", label: "Equip.", cls: "num" },
+  { key: "nota", label: "Nota", cls: "num" },
 ];
 const EQ_COLS = [
   ["lab", "Laboratório", ""], ["unidade", "Unidade", ""],
@@ -292,7 +301,7 @@ fetch("data.json")
   });
 
 function init() {
-  const required = ["#lab-filters", "#eq-filters", "#lab-table", "#eq-table", "#lab-summary", "#eq-summary", "#lab-active", "#eq-active", "#lab-limpar", "#eq-limpar", "#loading", "#modal", "#modal-close", "#modal-content", "#meta-info", "#dist-filters", "#dist-groups", "#dist-budget", "#dist-active", "#dist-limpar", "#dist-sugerir", "#dist-desmarcar", "#dist-exportar", "#dist-aside", "#dist-layout"];
+  const required = ["#lab-filters", "#eq-filters", "#lab-table", "#eq-table", "#lab-summary", "#eq-summary", "#lab-active", "#eq-active", "#lab-limpar", "#eq-limpar", "#loading", "#modal", "#modal-close", "#modal-content", "#meta-info", "#infra-filters", "#infra-table", "#infra-summary", "#infra-active", "#infra-limpar", "#soft-filters", "#soft-table", "#soft-summary", "#soft-active", "#soft-limpar", "#lab-export", "#eq-export", "#infra-export", "#soft-export", "#dist-filters", "#dist-groups", "#dist-budget", "#dist-active", "#dist-limpar", "#dist-sugerir", "#dist-desmarcar", "#dist-exportar", "#dist-aside", "#dist-layout"];
   const missing = required.filter((sel) => !$(sel));
   if (missing.length) {
     const ld = $("#loading");
@@ -313,14 +322,24 @@ function init() {
   DATA.equipNovos.forEach((e) => {
     (equipPorLab[e.labId] || (equipPorLab[e.labId] = { existentes: [], novos: [] })).novos.push(e);
   });
+  DATA.labs.forEach((l) => { swPorLab[l.id] = { existentes: [], novos: [] }; });
+  (DATA.softwaresExistentes || []).forEach((s) => {
+    (swPorLab[s.labId] || (swPorLab[s.labId] = { existentes: [], novos: [] })).existentes.push(s);
+  });
+  (DATA.softwaresNovos || []).forEach((s) => {
+    (swPorLab[s.labId] || (swPorLab[s.labId] = { existentes: [], novos: [] })).novos.push(s);
+  });
 
   const m = DATA.meta;
   $("#meta-info").innerHTML =
-    `${fmtNum(m.totais.labs)} laboratórios · ${fmtNum(m.totais.equipExistentes + m.totais.equipNovos)} equipamentos`;
+    `${fmtNum(m.totais.labs)} laboratórios · ${fmtNum(m.totais.equipExistentes + m.totais.equipNovos)} equipamentos · ` +
+    `${fmtNum((m.totais.softwaresExistentes || 0) + (m.totais.softwaresNovos || 0))} softwares`;
 
   const B = computeBounds();
   buildLabSidebar(m, B);
   buildEquipSidebar(m, B);
+  buildInfraSidebar(m, B);
+  buildSoftwareSidebar(m, B);
   buildDistData();
   buildDistSidebar(m);
 
@@ -328,6 +347,8 @@ function init() {
   wireLabSort();
   buildEquipThead();
   wireEquipSort();
+  wireInfraSort();
+  wireSoftSort();
   wireModal();
   wireFiltersToggle();
   initTooltips();
@@ -339,6 +360,18 @@ function init() {
     [...eqLabControls, ...eqItemControls].forEach((c) => c.reset());
     renderEquip();
   });
+  $("#infra-limpar").addEventListener("click", () => {
+    infraControls.forEach((c) => c.reset());
+    renderInfra();
+  });
+  $("#soft-limpar").addEventListener("click", () => {
+    [...softLabControls, ...softItemControls].forEach((c) => c.reset());
+    renderSoftware();
+  });
+  $("#lab-export").addEventListener("click", exportLabsCsv);
+  $("#eq-export").addEventListener("click", exportEquipCsv);
+  $("#infra-export").addEventListener("click", exportInfraCsv);
+  $("#soft-export").addEventListener("click", exportSoftCsv);
   $("#dist-limpar").addEventListener("click", () => {
     distControls.forEach((c) => c.reset());
     renderDist();
@@ -361,6 +394,8 @@ function init() {
   $("#loading").removeAttribute("aria-busy");
   renderLabs();
   renderEquip();
+  renderInfra();
+  renderSoftware();
   renderDist();
   } catch (err) {
     const ld = $("#loading");
@@ -391,6 +426,11 @@ function computeBounds() {
     valor: [0, maxOf(eqAll, (e) => e.valor)],
     prioridade: [0, 10],
     qtd: [0, maxOf(eqAll, (e) => Math.max(e.qtdAdquirir || 0, e.qtdNecessaria || 0))],
+    riscoFisico: [0, 10],
+    riscoPatrimonial: [0, 10],
+    custoMobiliario: [0, maxOf(labs, (l) => l.infra.custoMobiliario)],
+    custoObras: [0, maxOf(labs, (l) => l.infra.custoObras)],
+    custoMobiliarioNovo: [0, maxOf(labs, (l) => l.infra.custoMobiliarioNovo)],
   };
 }
 
@@ -735,11 +775,9 @@ function renderLabs() {
   labs.forEach((l) => { l._nEquip = nEquip(l.id); });
 
   const k = labSort.key;
-  labs.sort((a, b) => {
-    const av = k === "nEquip" ? a._nEquip : a[k];
-    const bv = k === "nEquip" ? b._nEquip : b[k];
-    return cmp(av, bv) * labSort.dir;
-  });
+  const labVal = (x) =>
+    k === "nEquip" ? x._nEquip : k === "nota" ? (x.notaValida ? x.nota : -1) : x[k];
+  labs.sort((a, b) => cmp(labVal(a), labVal(b)) * labSort.dir);
 
   $("#lab-summary").innerHTML =
     `<strong>${fmtNum(labs.length)}</strong> de ${fmtNum(DATA.labs.length)} laboratórios`;
@@ -764,7 +802,8 @@ function renderLabs() {
       `<td class="num">${fmtNum(l.qtdCursosProprios)}</td><td class="num">${fmtNum(l.qtdCursosExternos)}</td>` +
       `<td class="num">${fmtNum(l.discentes)}</td>` +
       `<td class="num">${fmtNum(l.capacidade)}</td>` +
-      `<td class="num">${fmtNum(l._nEquip)}</td>`;
+      `<td class="num">${fmtNum(l._nEquip)}</td>` +
+      `<td class="num">${notaPill(l)}</td>`;
     tr.addEventListener("click", () => openLab(l.id, tr));
     tr.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLab(l.id, tr); }
@@ -900,6 +939,429 @@ function renderEquip() {
   tb.appendChild(frag);
   const wrap = document.querySelector("#eq-table")?.closest(".table-wrap");
   if (wrap) { wireScrollHints(wrap); updateScrollHints(wrap); }
+}
+
+/* ============================================================ aba Infraestrutura
+   Uma linha por laboratório. As "visões" (sub-abas) só trocam o conjunto de
+   colunas; os filtros da barra lateral valem para todas. Clicar abre o dossiê
+   completo do laboratório (openLab). */
+
+/* badge da Nota (0–10). polarity da cor: ≥8 ok · ≥5 atenção · <5 ruim */
+function notaPill(l) {
+  if (!l.notaValida)
+    return '<span class="nota-pill na" data-tip="Laboratório sem respostas de infraestrutura no levantamento — não avaliado.">s/ dados</span>';
+  const n = l.nota;
+  const cls = n >= 8 ? "ok" : n >= 5 ? "warn" : "bad";
+  return `<span class="nota-pill ${cls}">${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+}
+
+/* badge Sim/Não/N/A. polarity "pos": Sim é bom (verde); "neg": Sim é uma
+   necessidade/problema (vermelho). Respostas longas (mobiliário) viram tooltip. */
+function infBadge(v, polarity) {
+  const s = (v || "").trim();
+  if (!s) return '<span class="muted">—</span>';
+  const low = s.toLowerCase();
+  if (low.startsWith("não se aplica") || low.startsWith("nao se aplica"))
+    return '<span class="badge off">N/A</span>';
+  const yes = low.startsWith("sim");
+  const naoPossui = low.startsWith("não possui") || low.startsWith("nao possui");
+  const good = polarity === "neg" ? !yes : yes;
+  const cls = good ? "ok" : "bad";
+  const txt = yes ? "Sim" : naoPossui ? "Não possui" : "Não";
+  const tip = s.length > txt.length ? ` data-tip="${esc(s)}"` : "";
+  return `<span class="badge ${cls}"${tip}>${txt}</span>`;
+}
+
+/* célula de risco 0–10: <4 ok · 4–6 atenção · ≥7 ruim */
+function riscoCell(n) {
+  const cls = n >= 7 ? "bad" : n >= 4 ? "warn" : "ok";
+  return `<span class="risco ${cls}">${fmtNum(n)}</span>`;
+}
+
+/* nº de penalidades aplicadas (itens do breakdown com penalidade > 0) */
+function nPenalidades(l) {
+  return (l.infra.notaBreakdown || []).filter((b) => b.penalidade > 0).length;
+}
+
+const moneyCell = (v) => (v ? fmtBRL(v) : '<span class="muted">—</span>');
+
+/* colunas reutilizáveis */
+const COL_LAB = { key: "nome", label: "Laboratório", val: (l) => l.nome,
+  html: (l) => `<span class="lab-name">${esc(l.nome)}</span>${l.atendeLicenciatura ? ' <span class="badge lic">lic.</span>' : ""}` };
+const COL_UNI = { key: "unidade", label: "Unidade", val: (l) => l.unidade, html: (l) => esc(l.unidade) };
+const COL_AREA = { key: "area", label: "Grande Área", val: (l) => l.area, html: (l) => esc(l.area) };
+const COL_LOC = { key: "localidade", label: "Localidade", val: (l) => l.localidade, html: (l) => esc(l.localidade) };
+const COL_NOTA = { key: "nota", label: "Nota", cls: "num",
+  tip: "Nota de infraestrutura (0–10): 10 menos as penalidades. Clique no laboratório para ver o cálculo.",
+  val: (l) => (l.notaValida ? l.nota : -1), html: (l) => notaPill(l) };
+
+/* visões (sub-abas) da aba Infraestrutura */
+const INFRA_VIEWS = {
+  instalacoes: {
+    defaultSort: { key: "nota", dir: 1 },
+    cols: [
+      COL_LAB, COL_UNI,
+      { key: "tomadas", label: "Tomadas", cls: "ctr", tip: "5.1 — quantidade de tomadas suficiente?", val: (l) => l.infra.tomadas, html: (l) => infBadge(l.infra.tomadas, "pos") },
+      { key: "iluminacao", label: "Iluminação", cls: "ctr", tip: "5.2 — iluminação suficiente?", val: (l) => l.infra.iluminacao, html: (l) => infBadge(l.infra.iluminacao, "pos") },
+      { key: "arCondicionado", label: "Ar-cond.", cls: "ctr", tip: "5.3 — ar-condicionado funcionando?", val: (l) => l.infra.arCondicionado, html: (l) => infBadge(l.infra.arCondicionado, "pos") },
+      { key: "wifi", label: "Wi-Fi", cls: "ctr", tip: "5.5 — rede Wi-Fi própria?", val: (l) => l.infra.wifi, html: (l) => infBadge(l.infra.wifi, "pos") },
+      { key: "eduroam", label: "eduroam", cls: "ctr", tip: "5.6 — rede eduroam?", val: (l) => l.infra.eduroam, html: (l) => infBadge(l.infra.eduroam, "pos") },
+      { key: "riscoFisico", label: "Risco físico", cls: "num", tip: "5.7 — risco à segurança física das pessoas (0–10).", val: (l) => l.infra.riscoFisico, html: (l) => riscoCell(l.infra.riscoFisico) },
+      { key: "riscoPatrimonial", label: "Risco patrim.", cls: "num", tip: "5.8 — risco à segurança patrimonial (0–10).", val: (l) => l.infra.riscoPatrimonial, html: (l) => riscoCell(l.infra.riscoPatrimonial) },
+      COL_NOTA,
+    ],
+  },
+  residuos: {
+    defaultSort: { key: "nome", dir: 1 },
+    cols: [
+      COL_LAB, COL_UNI,
+      { key: "residuoLiquidoAdequado", label: "Líquidos — descarte", cls: "ctr", tip: "5.10 — instalações adequadas para descarte de resíduos líquidos?", val: (l) => l.infra.residuoLiquidoAdequado, html: (l) => infBadge(l.infra.residuoLiquidoAdequado, "pos") },
+      { key: "residuoLiquidoLista", label: "Resíduos líquidos", cls: "cell-clip", val: (l) => l.infra.residuoLiquidoLista, html: (l) => cellText(l.infra.residuoLiquidoLista) },
+      { key: "residuoSolidoAdequado", label: "Sólidos — descarte", cls: "ctr", tip: "5.12 — instalações adequadas para descarte de resíduos sólidos?", val: (l) => l.infra.residuoSolidoAdequado, html: (l) => infBadge(l.infra.residuoSolidoAdequado, "pos") },
+      { key: "residuoSolidoLista", label: "Resíduos sólidos", cls: "cell-clip", val: (l) => l.infra.residuoSolidoLista, html: (l) => cellText(l.infra.residuoSolidoLista) },
+    ],
+  },
+  acessibilidade: {
+    defaultSort: { key: "nome", dir: 1 },
+    cols: [
+      COL_LAB, COL_UNI,
+      { key: "necessitaAcessibilidade", label: "Necessita acessib.", cls: "ctr", tip: "5.15 — necessidade de adequação de acessibilidade para PcD?", val: (l) => l.infra.necessitaAcessibilidade, html: (l) => infBadge(l.infra.necessitaAcessibilidade, "neg") },
+      { key: "acessibilidadeDescricao", label: "O que falta", cls: "cell-clip", val: (l) => l.infra.acessibilidadeDescricao, html: (l) => cellText(l.infra.acessibilidadeDescricao) },
+      { key: "necessitaPredial", label: "Adequação predial", cls: "ctr", tip: "5.14 — necessidade de adequação predial (água, gás, paredes, forro…)?", val: (l) => l.infra.necessitaPredial, html: (l) => infBadge(l.infra.necessitaPredial, "neg") },
+      { key: "predialDescricao", label: "Descrição predial", cls: "cell-clip", val: (l) => l.infra.predialDescricao, html: (l) => cellText(l.infra.predialDescricao) },
+    ],
+  },
+  mobiliario: {
+    defaultSort: { key: "custoMobiliario", dir: -1 },
+    cols: [
+      COL_LAB, COL_UNI,
+      { key: "mobiliarioSuficiente", label: "Suficiente?", cls: "ctr", tip: "4.1 — quantitativo de mobiliário é suficiente?", val: (l) => l.infra.mobiliarioSuficiente, html: (l) => infBadge(l.infra.mobiliarioSuficiente, "pos") },
+      { key: "mobiliarioCondicoes", label: "Condições", cls: "ctr", tip: "4.2 — mobiliário em boas condições?", val: (l) => l.infra.mobiliarioCondicoes, html: (l) => infBadge(l.infra.mobiliarioCondicoes, "pos") },
+      { key: "custoMobiliario", label: "Custo estimado (R$)", cls: "num", tip: "4.4 — estimativa para manutenção e/ou aquisição de mobiliário.", val: (l) => l.infra.custoMobiliario, html: (l) => moneyCell(l.infra.custoMobiliario) },
+      { key: "mobiliarioComentarios", label: "Comentários", cls: "cell-clip", val: (l) => l.infra.mobiliarioComentarios, html: (l) => cellText(l.infra.mobiliarioComentarios) },
+    ],
+  },
+  obras: {
+    defaultSort: { key: "custoObras", dir: -1 },
+    cols: [
+      COL_LAB, COL_UNI,
+      { key: "necessitaExpansao", label: "Necessita expansão?", cls: "ctr", tip: "6.1 — necessidade de expansão do espaço ou novos laboratórios?", val: (l) => l.infra.necessitaExpansao, html: (l) => infBadge(l.infra.necessitaExpansao, "neg") },
+      { key: "expansaoTipo", label: "Expansão / construção", cls: "cell-clip", val: (l) => l.infra.expansaoTipo, html: (l) => cellText(l.infra.expansaoTipo) },
+      { key: "custoObras", label: "Custo obras (R$)", cls: "num", tip: "6.3 — quanto seria necessário para obras.", val: (l) => l.infra.custoObras, html: (l) => moneyCell(l.infra.custoObras) },
+      { key: "custoMobiliarioNovo", label: "Mobiliário novo (R$)", cls: "num", tip: "6.4 — quanto seria necessário para mobiliário.", val: (l) => l.infra.custoMobiliarioNovo, html: (l) => moneyCell(l.infra.custoMobiliarioNovo) },
+    ],
+  },
+  notas: {
+    defaultSort: { key: "nota", dir: 1 },
+    cols: [
+      COL_NOTA, COL_LAB, COL_UNI, COL_AREA, COL_LOC,
+      { key: "riscoFisico", label: "Risco físico", cls: "num", tip: "5.7 — risco à segurança física (0–10).", val: (l) => l.infra.riscoFisico, html: (l) => riscoCell(l.infra.riscoFisico) },
+      { key: "riscoPatrimonial", label: "Risco patrim.", cls: "num", tip: "5.8 — risco à segurança patrimonial (0–10).", val: (l) => l.infra.riscoPatrimonial, html: (l) => riscoCell(l.infra.riscoPatrimonial) },
+      { key: "nPenal", label: "Penalidades", cls: "num", tip: "Quantos critérios penalizaram a Nota deste laboratório.", val: (l) => nPenalidades(l), html: (l) => (l.notaValida ? `<span class="num">${nPenalidades(l)}</span>` : '<span class="muted">—</span>') },
+    ],
+  },
+};
+
+/* ---------------------------------------------------- sidebar Infraestrutura */
+function buildInfraSidebar(m, B) {
+  const host = $("#infra-filters");
+  infraControls = [];
+  buildGroups(host, [
+    ["Busca", [
+      searchControl({ key: "infBusca", label: "Nome do laboratório", placeholder: "buscar laboratório…", onChange: renderInfra }),
+    ]],
+    ["Localização", [
+      chipsControl({ key: "infLoc", label: "Localidade / Campus", values: m.localidades, onChange: renderInfra }),
+      chipsControl({ key: "infArea", label: "Grande Área", values: m.areas, onChange: renderInfra }),
+      selectControl({ key: "infUni", label: "Unidade acadêmica", values: m.unidades, allLabel: "Todas as unidades", onChange: renderInfra }),
+    ]],
+    ["Nota", [
+      rangeControl({ key: "infNota", label: "Nota de infraestrutura (0–10)", bounds: [0, 10], fmt: "int", help: "10 menos as penalidades de infraestrutura. Laboratórios sem respostas (não avaliados) são ocultados quando este filtro é usado.", onChange: renderInfra }),
+    ]],
+    ["Instalações e redes", [
+      switchControl({ key: "infTomadas", label: "Tomadas insuficientes", onChange: renderInfra }),
+      switchControl({ key: "infIlum", label: "Iluminação insuficiente", onChange: renderInfra }),
+      switchControl({ key: "infArcond", label: "Ar-condicionado ausente ou parado", onChange: renderInfra }),
+      switchControl({ key: "infRede", label: "Sem rede (sem Wi-Fi própria e sem eduroam)", onChange: renderInfra }),
+      rangeControl({ key: "infRiscoF", label: "Risco à segurança física (0–10)", bounds: B.riscoFisico, fmt: "int", help: "Nota 0–10 atribuída ao risco à segurança física das pessoas (5.7).", onChange: renderInfra }),
+      rangeControl({ key: "infRiscoP", label: "Risco à segurança patrimonial (0–10)", bounds: B.riscoPatrimonial, fmt: "int", help: "Nota 0–10 atribuída ao risco à segurança patrimonial (5.8).", onChange: renderInfra }),
+    ]],
+    ["Resíduos", [
+      switchControl({ key: "infResLiq", label: "Descarte de líquidos inadequado", onChange: renderInfra }),
+      switchControl({ key: "infResSol", label: "Descarte de sólidos inadequado", onChange: renderInfra }),
+    ]],
+    ["Acessibilidade e predial", [
+      switchControl({ key: "infAcess", label: "Necessita acessibilidade", onChange: renderInfra }),
+      switchControl({ key: "infPredial", label: "Necessita adequação predial", onChange: renderInfra }),
+    ]],
+    ["Mobiliário", [
+      switchControl({ key: "infMobInsuf", label: "Mobiliário insuficiente", onChange: renderInfra }),
+      switchControl({ key: "infMobRuim", label: "Mobiliário em más condições", onChange: renderInfra }),
+      rangeControl({ key: "infCustoMob", label: "Custo de mobiliário (R$)", bounds: B.custoMobiliario, fmt: "brl", help: "Estimativa para manutenção e/ou aquisição de mobiliário (4.4).", onChange: renderInfra }),
+    ]],
+    ["Obras / futuros", [
+      switchControl({ key: "infExpansao", label: "Necessita expansão", onChange: renderInfra }),
+      rangeControl({ key: "infCustoObras", label: "Custo de obras (R$)", bounds: B.custoObras, fmt: "brl", help: "Estimativa para obras de expansão/construção (6.3).", onChange: renderInfra }),
+      rangeControl({ key: "infCustoMobNovo", label: "Custo de mobiliário novo (R$)", bounds: B.custoMobiliarioNovo, fmt: "brl", help: "Estimativa para mobiliário em expansão/construção (6.4).", onChange: renderInfra }),
+    ]],
+  ], infraControls);
+}
+
+function matchInfra(l, C) {
+  const inf = l.infra;
+  if (C.infBusca && !l.nome.toLowerCase().includes(C.infBusca.toLowerCase())) return false;
+  if (C.infLoc.length && !C.infLoc.includes(l.localidade)) return false;
+  if (C.infArea.length && !C.infArea.includes(l.area)) return false;
+  if (C.infUni && l.unidade !== C.infUni) return false;
+  if (C.infNota.min !== null || C.infNota.max !== null) {
+    if (!l.notaValida) return false;
+    if (!inRange(l.nota, C.infNota.min, C.infNota.max)) return false;
+  }
+  if (C.infTomadas && !inf.tomadasInsuf) return false;
+  if (C.infIlum && !inf.iluminacaoInsuf) return false;
+  if (C.infArcond && !inf.arCondProblema) return false;
+  if (C.infRede && !inf.semRede) return false;
+  if (!inRange(inf.riscoFisico, C.infRiscoF.min, C.infRiscoF.max)) return false;
+  if (!inRange(inf.riscoPatrimonial, C.infRiscoP.min, C.infRiscoP.max)) return false;
+  if (C.infResLiq && !inf.residuoLiqInadeq) return false;
+  if (C.infResSol && !inf.residuoSolInadeq) return false;
+  if (C.infAcess && !inf.precisaAcessib) return false;
+  if (C.infPredial && !inf.precisaPredial) return false;
+  if (C.infMobInsuf && !inf.mobiliarioInsuf) return false;
+  if (C.infMobRuim && !inf.mobiliarioRuim) return false;
+  if (!inRange(inf.custoMobiliario, C.infCustoMob.min, C.infCustoMob.max)) return false;
+  if (C.infExpansao && !inf.necessitaExpansaoFlag) return false;
+  if (!inRange(inf.custoObras, C.infCustoObras.min, C.infCustoObras.max)) return false;
+  if (!inRange(inf.custoMobiliarioNovo, C.infCustoMobNovo.min, C.infCustoMobNovo.max)) return false;
+  return true;
+}
+
+function buildInfraThead(cols) {
+  const thead = $("#infra-table thead");
+  thead.innerHTML = "";
+  const htr = el("tr");
+  cols.forEach((c) => {
+    const th = el("th", c.cls || "");
+    th.dataset.sort = c.key;
+    th.innerHTML = esc(c.label);
+    if (c.tip) {
+      const info = infoIcon(c.tip);
+      info.classList.add("pulse");
+      info.addEventListener("click", (e) => e.stopPropagation());
+      th.appendChild(document.createTextNode(" "));
+      th.appendChild(info);
+    } else {
+      th.dataset.tip = `${c.label} · clique para ordenar`;
+    }
+    th.insertAdjacentHTML("beforeend", ' <span class="arrow" aria-hidden="true"></span>');
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+}
+
+function renderInfra() {
+  const C = readControls(infraControls);
+  const view = INFRA_VIEWS[infraView];
+  const rows = DATA.labs.filter((l) => matchInfra(l, C));
+
+  const col = view.cols.find((c) => c.key === infraSort.key) || view.cols[0];
+  const porNota = infraSort.key === "nota" || infraSort.key === "nPenal";
+  rows.sort((a, b) => {
+    // ao ordenar pela Nota, os não avaliados ficam sempre por último
+    if (porNota && a.notaValida !== b.notaValida) return a.notaValida ? -1 : 1;
+    return cmp(col.val(a), col.val(b)) * infraSort.dir;
+  });
+
+  const nAvaliados = rows.filter((l) => l.notaValida).length;
+  $("#infra-summary").innerHTML =
+    `<strong>${fmtNum(rows.length)}</strong> de ${fmtNum(DATA.labs.length)} laboratórios` +
+    (nAvaliados < rows.length ? ` · ${fmtNum(rows.length - nAvaliados)} sem avaliação` : "");
+
+  renderActiveBar("#infra-active", infraControls, renderInfra);
+  buildInfraThead(view.cols);
+  applySortIndicator($("#infra-table thead"), infraSort.key, infraSort.dir);
+
+  const tb = $("#infra-table tbody");
+  tb.innerHTML = "";
+  if (!rows.length) {
+    tb.appendChild(el("tr", "empty-row", `<td colspan="${view.cols.length}">Nenhum laboratório atende aos filtros selecionados.</td>`));
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  rows.forEach((l) => {
+    const tr = el("tr", "clickable");
+    tr.tabIndex = 0;
+    tr.setAttribute("role", "button");
+    tr.setAttribute("aria-label", "Ver detalhes de " + l.nome);
+    tr.innerHTML = view.cols.map((c) => `<td class="${c.cls || ""}">${c.html(l)}</td>`).join("");
+    tr.addEventListener("click", () => openLab(l.id, tr));
+    tr.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLab(l.id, tr); }
+    });
+    frag.appendChild(tr);
+  });
+  tb.appendChild(frag);
+  const wrap = document.querySelector("#infra-table")?.closest(".table-wrap");
+  if (wrap) { wireScrollHints(wrap); updateScrollHints(wrap); }
+}
+
+function wireInfraSort() {
+  const thead = $("#infra-table thead");
+  thead.addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-sort]");
+    if (!th) return;
+    const key = th.dataset.sort;
+    const textKeys = ["nome", "unidade", "area", "localidade",
+      "residuoLiquidoLista", "residuoSolidoLista", "acessibilidadeDescricao",
+      "predialDescricao", "expansaoTipo", "mobiliarioComentarios"];
+    if (infraSort.key === key) infraSort.dir *= -1;
+    else { infraSort.key = key; infraSort.dir = textKeys.includes(key) ? 1 : -1; }
+    renderInfra();
+  });
+}
+
+/* ============================================================ aba Softwares
+   Mesmo padrão da aba Equipamentos: critérios de laboratório + de software, com
+   sub-abas Existentes / Novos. Cada linha abre o dossiê do laboratório. */
+const SOFT_VIEWS = {
+  existentes: [
+    { key: "lab", label: "Laboratório", val: (s) => labsById[s.labId]?.nome || s.labId, html: (s) => `<a href="#" data-lab="${esc(s.labId)}">${esc(labsById[s.labId]?.nome || s.labId)}</a>` },
+    { key: "unidade", label: "Unidade", val: (s) => labsById[s.labId]?.unidade || "", html: (s) => esc(labsById[s.labId]?.unidade || "") },
+    { key: "nome", label: "Software", val: (s) => s.nome, html: (s) => esc(s.nome) },
+    { key: "situacao", label: "Situação", val: (s) => s.situacao, html: (s) => cellText(s.situacao) },
+    { key: "numLicencas", label: "Licenças", val: (s) => s.numLicencas, html: (s) => cellText(s.numLicencas) },
+    { key: "vigencia", label: "Vigência", val: (s) => s.vigencia, html: (s) => cellText(s.vigencia) },
+    { key: "valor", label: "Custo total (R$)", cls: "num", tip: "Soma das estimativas informadas para este software: licenciamento, atualização, aquisição e renovação.", val: (s) => s.valor, html: (s) => moneyCell(s.valor) },
+    { key: "comentarios", label: "Comentários", cls: "cell-clip", val: (s) => s.comentarios, html: (s) => cellText(s.comentarios) },
+  ],
+  novos: [
+    { key: "lab", label: "Laboratório", val: (s) => labsById[s.labId]?.nome || s.labId, html: (s) => `<a href="#" data-lab="${esc(s.labId)}">${esc(labsById[s.labId]?.nome || s.labId)}</a>` },
+    { key: "unidade", label: "Unidade", val: (s) => labsById[s.labId]?.unidade || "", html: (s) => esc(labsById[s.labId]?.unidade || "") },
+    { key: "nome", label: "Software", val: (s) => s.nome, html: (s) => esc(s.nome) },
+    { key: "numLicencas", label: "Licenças", val: (s) => s.numLicencas, html: (s) => cellText(s.numLicencas) },
+    { key: "valor", label: "Custo total (R$)", cls: "num", tip: "Soma das estimativas de licenciamento e atualização informadas para este software.", val: (s) => s.valor, html: (s) => moneyCell(s.valor) },
+    { key: "comentarios", label: "Comentários", cls: "cell-clip", val: (s) => s.comentarios, html: (s) => cellText(s.comentarios) },
+  ],
+};
+
+function buildSoftwareSidebar(m, B) {
+  const host = $("#soft-filters");
+  softLabControls = [];
+  softItemControls = [];
+  const busca = searchControl({ key: "swBusca", label: "Nome do software", placeholder: "nome do software…", onChange: renderSoftware });
+  const loc = chipsControl({ key: "swLoc", label: "Localidade / Campus", values: m.localidades, onChange: renderSoftware });
+  const area = chipsControl({ key: "swArea", label: "Grande Área", values: m.areas, onChange: renderSoftware });
+  const uni = selectControl({ key: "swUni", label: "Unidade acadêmica", values: m.unidades, allLabel: "Todas as unidades", onChange: renderSoftware });
+  const lic = switchControl({ key: "swLic", label: "Atende curso de licenciatura", onChange: renderSoftware });
+  const disc = rangeControl({ key: "swDisc", label: "Alunos atendidos / semestre", bounds: B.discentes, fmt: "int", onChange: renderSoftware });
+  const valor = rangeControl({ key: "swValor", label: "Custo total (R$)", bounds: [0, Math.max(B.valorSwExistente ? B.valorSwExistente[1] : 0, B.valorSwNovo ? B.valorSwNovo[1] : 0)], fmt: "brl", help: "Soma das estimativas de custo informadas para o software.", onChange: renderSoftware });
+  const comComent = switchControl({ key: "swComComent", label: "Apenas com comentário preenchido", onChange: renderSoftware });
+
+  softLabControls = [loc, area, uni, lic, disc];
+  softItemControls = [busca, valor, comComent];
+
+  buildGroups(host, [
+    ["Busca", [busca]],
+    ["Localização", [loc, area, uni]],
+    ["Quem atende", [lic, disc]],
+    ["Critérios do software", [valor, comComent]],
+  ], []);
+}
+
+function matchSoftLab(l, C) {
+  if (C.swLoc.length && !C.swLoc.includes(l.localidade)) return false;
+  if (C.swArea.length && !C.swArea.includes(l.area)) return false;
+  if (C.swUni && l.unidade !== C.swUni) return false;
+  if (C.swLic && !l.atendeLicenciatura) return false;
+  if (!inRange(l.discentes, C.swDisc.min, C.swDisc.max)) return false;
+  return true;
+}
+
+function buildSoftThead(cols) {
+  const thead = $("#soft-table thead");
+  thead.innerHTML = "";
+  const htr = el("tr");
+  cols.forEach((c) => {
+    const th = el("th", c.cls || "");
+    th.dataset.sort = c.key;
+    th.innerHTML = esc(c.label);
+    if (c.tip) {
+      const info = infoIcon(c.tip);
+      info.classList.add("pulse");
+      info.addEventListener("click", (e) => e.stopPropagation());
+      th.appendChild(document.createTextNode(" "));
+      th.appendChild(info);
+    } else {
+      th.dataset.tip = `${c.label} · clique para ordenar`;
+    }
+    th.insertAdjacentHTML("beforeend", ' <span class="arrow" aria-hidden="true"></span>');
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+}
+
+function renderSoftware() {
+  const Clab = readControls(softLabControls);
+  const Citem = readControls(softItemControls);
+  const labsOk = new Set(DATA.labs.filter((l) => matchSoftLab(l, Clab)).map((l) => l.id));
+
+  const isNovo = softSubtab === "novos";
+  const fonte = isNovo ? (DATA.softwaresNovos || []) : (DATA.softwaresExistentes || []);
+  const buscaLow = Citem.swBusca.toLowerCase();
+
+  const rows = fonte.filter((s) => {
+    if (!labsOk.has(s.labId)) return false;
+    if (buscaLow && !s.nome.toLowerCase().includes(buscaLow)) return false;
+    if (!inRange(s.valor, Citem.swValor.min, Citem.swValor.max)) return false;
+    if (Citem.swComComent && !s.temComentario) return false;
+    return true;
+  });
+
+  const cols = SOFT_VIEWS[isNovo ? "novos" : "existentes"];
+  const col = cols.find((c) => c.key === softSort.key) || cols[0];
+  rows.sort((a, b) => cmp(col.val(a), col.val(b)) * softSort.dir);
+
+  const totValor = rows.reduce((s, e) => s + (e.valor || 0), 0);
+  const nLabs = new Set(rows.map((s) => s.labId)).size;
+  $("#soft-summary").innerHTML =
+    `<strong>${fmtNum(rows.length)}</strong> software${rows.length !== 1 ? "s" : ""} · ` +
+    `<strong>${fmtNum(nLabs)}</strong> laboratório${nLabs !== 1 ? "s" : ""} · ` +
+    `custo total <span class="accent">${fmtBRL(totValor)}</span>`;
+
+  renderActiveBar("#soft-active", [...softLabControls, ...softItemControls], renderSoftware);
+  buildSoftThead(cols);
+  applySortIndicator($("#soft-table thead"), softSort.key, softSort.dir);
+
+  const tb = $("#soft-table tbody");
+  tb.innerHTML = "";
+  if (!rows.length) {
+    tb.appendChild(el("tr", "empty-row", `<td colspan="${cols.length}">Nenhum software atende aos filtros selecionados.</td>`));
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  rows.forEach((s) => {
+    const tr = el("tr");
+    tr.innerHTML = cols.map((c) => `<td class="${c.cls || ""}">${c.html(s)}</td>`).join("");
+    const a = tr.querySelector("a[data-lab]");
+    if (a) a.addEventListener("click", (ev) => { ev.preventDefault(); openLab(s.labId, ev.currentTarget); });
+    frag.appendChild(tr);
+  });
+  tb.appendChild(frag);
+  const wrap = document.querySelector("#soft-table")?.closest(".table-wrap");
+  if (wrap) { wireScrollHints(wrap); updateScrollHints(wrap); }
+}
+
+function wireSoftSort() {
+  const thead = $("#soft-table thead");
+  thead.addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-sort]");
+    if (!th) return;
+    const key = th.dataset.sort;
+    const textKeys = ["lab", "unidade", "nome", "situacao", "numLicencas", "vigencia", "comentarios"];
+    if (softSort.key === key) softSort.dir *= -1;
+    else { softSort.key = key; softSort.dir = textKeys.includes(key) ? 1 : -1; }
+    renderSoftware();
+  });
 }
 
 /* ============================================================ aba Distribuição
@@ -1553,6 +2015,169 @@ function exportDistCsv() {
   URL.revokeObjectURL(a.href);
 }
 
+/* ============================================================ exportação de dados (CSV)
+   Gera um CSV (separador ";", BOM UTF-8) que abre direto no Excel em pt-BR.
+   `columns` = [{ label, get(row) }]. Cada aba exporta as linhas atualmente
+   filtradas/visíveis, para que qualquer pessoa extraia exatamente o que vê. */
+function downloadCsv(filename, columns, rows) {
+  const cell = (v) => `"${String(v ?? "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
+  const linhas = [columns.map((c) => cell(c.label)).join(";")];
+  rows.forEach((r) => linhas.push(columns.map((c) => cell(c.get(r))).join(";")));
+  const blob = new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = el("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+/* colunas completas por laboratório (identificação + pessoas + cursos + Nota +
+   todos os campos de infraestrutura) — usadas nas abas Laboratórios e Infraestrutura */
+function labCsvColumns() {
+  const f2 = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const I = (l) => l.infra;
+  return [
+    { label: "ID", get: (l) => l.id },
+    { label: "Laboratório", get: (l) => l.nome },
+    { label: "Unidade", get: (l) => l.unidade },
+    { label: "Grande Área", get: (l) => l.area },
+    { label: "Localidade", get: (l) => l.localidade },
+    { label: "Cursos da unidade", get: (l) => l.cursosProprios },
+    { label: "Qtd cursos da unidade", get: (l) => l.qtdCursosProprios },
+    { label: "Cursos externos", get: (l) => l.cursosExternos },
+    { label: "Qtd cursos externos", get: (l) => l.qtdCursosExternos },
+    { label: "Atende licenciatura", get: (l) => (l.atendeLicenciatura ? "Sim" : "Não") },
+    { label: "Alunos/semestre", get: (l) => l.discentes },
+    { label: "Capacidade/turma", get: (l) => l.capacidade },
+    { label: "Docentes", get: (l) => l.docentes },
+    { label: "TAEs", get: (l) => l.taes },
+    { label: "Bolsistas", get: (l) => l.bolsistas },
+    { label: "Terceirizados", get: (l) => l.terceirizados },
+    { label: "Nº equipamentos", get: (l) => nEquip(l.id) },
+    { label: "Nota (0-10)", get: (l) => (l.notaValida ? f2(l.nota) : "sem dados") },
+    { label: "Tomadas suficientes", get: (l) => I(l).tomadas },
+    { label: "Iluminação suficiente", get: (l) => I(l).iluminacao },
+    { label: "Ar-condicionado", get: (l) => I(l).arCondicionado },
+    { label: "Fica dentro da unidade", get: (l) => I(l).ficaDentroUnidade },
+    { label: "Wi-Fi própria", get: (l) => I(l).wifi },
+    { label: "eduroam", get: (l) => I(l).eduroam },
+    { label: "Risco segurança física (0-10)", get: (l) => I(l).riscoFisico },
+    { label: "Risco segurança patrimonial (0-10)", get: (l) => I(l).riscoPatrimonial },
+    { label: "Riscos - descrição", get: (l) => I(l).riscosDescricao },
+    { label: "Resíduos líquidos adequados", get: (l) => I(l).residuoLiquidoAdequado },
+    { label: "Resíduos líquidos - lista", get: (l) => I(l).residuoLiquidoLista },
+    { label: "Resíduos sólidos adequados", get: (l) => I(l).residuoSolidoAdequado },
+    { label: "Resíduos sólidos - lista", get: (l) => I(l).residuoSolidoLista },
+    { label: "Necessita acessibilidade", get: (l) => I(l).necessitaAcessibilidade },
+    { label: "Acessibilidade - descrição", get: (l) => I(l).acessibilidadeDescricao },
+    { label: "Necessita adequação predial", get: (l) => I(l).necessitaPredial },
+    { label: "Adequação predial - descrição", get: (l) => I(l).predialDescricao },
+    { label: "Mobiliário suficiente", get: (l) => I(l).mobiliarioSuficiente },
+    { label: "Mobiliário condições", get: (l) => I(l).mobiliarioCondicoes },
+    { label: "Custo mobiliário/manutenção (R$)", get: (l) => I(l).custoMobiliario },
+    { label: "Necessita expansão", get: (l) => I(l).necessitaExpansao },
+    { label: "Expansão - tipo", get: (l) => I(l).expansaoTipo },
+    { label: "Custo obras (R$)", get: (l) => I(l).custoObras },
+    { label: "Custo mobiliário novo (R$)", get: (l) => I(l).custoMobiliarioNovo },
+    { label: "Comentários", get: (l) => l.comentarios },
+  ];
+}
+
+function exportLabsCsv() {
+  const rows = DATA.labs.filter((l) => matchLab(l, readControls(labControls)));
+  if (!rows.length) { alert("Nenhum laboratório nos filtros atuais para exportar."); return; }
+  downloadCsv("laboratorios.csv", labCsvColumns(), rows);
+}
+
+function exportInfraCsv() {
+  const rows = DATA.labs.filter((l) => matchInfra(l, readControls(infraControls)));
+  if (!rows.length) { alert("Nenhum laboratório nos filtros atuais para exportar."); return; }
+  downloadCsv("infraestrutura-laboratorios.csv", labCsvColumns(), rows);
+}
+
+function exportEquipCsv() {
+  const Clab = readControls(eqLabControls);
+  const Citem = readControls(eqItemControls);
+  const labsOk = new Set(DATA.labs.filter((l) => matchEqLab(l, Clab)).map((l) => l.id));
+  const isNovo = eqSubtab === "novos";
+  const fonte = isNovo ? DATA.equipNovos : DATA.equipExistentes;
+  const qtdField = isNovo ? "qtdNecessaria" : "qtdAdquirir";
+  const buscaLow = Citem.eqBusca.toLowerCase();
+  const rows = fonte.filter((e) => {
+    if (!labsOk.has(e.labId)) return false;
+    if (buscaLow && !e.nome.toLowerCase().includes(buscaLow)) return false;
+    if (!inRange(e.valor, Citem.eqValor.min, Citem.eqValor.max)) return false;
+    if (!inRange(e.prioridade, Citem.eqPrio.min, Citem.eqPrio.max)) return false;
+    if (!inRange(e[qtdField], Citem.eqQtd.min, Citem.eqQtd.max)) return false;
+    if (Citem.eqComDesc && !e.temDescricao) return false;
+    if (Citem.eqComComent && !e.temComentario) return false;
+    return true;
+  });
+  if (!rows.length) { alert("Nenhum equipamento nos filtros atuais para exportar."); return; }
+  const lab = (e) => labsById[e.labId] || {};
+  const cols = [
+    { label: "Laboratório", get: (e) => lab(e).nome || e.labId },
+    { label: "Unidade", get: (e) => lab(e).unidade || "" },
+    { label: "Grande Área", get: (e) => lab(e).area || "" },
+    { label: "Localidade", get: (e) => lab(e).localidade || "" },
+    { label: "Equipamento", get: (e) => e.nome },
+    { label: "Prioridade", get: (e) => e.prioridade },
+    { label: isNovo ? "Qtd. necessária" : "Qtd. a adquirir", get: (e) => e[qtdField] },
+    { label: "Custo total (R$)", get: (e) => e.valor },
+    { label: "Estimativa custo unitário (R$)", get: (e) => { const q = e[qtdField] || 0; return q ? Math.round((e.valor || 0) / q) : ""; } },
+    { label: "Descrição", get: (e) => e.descricao },
+    { label: "Comentários", get: (e) => e.comentarios },
+  ];
+  downloadCsv(`equipamentos-${isNovo ? "novos" : "existentes"}.csv`, cols, rows);
+}
+
+function exportSoftCsv() {
+  const Clab = readControls(softLabControls);
+  const Citem = readControls(softItemControls);
+  const labsOk = new Set(DATA.labs.filter((l) => matchSoftLab(l, Clab)).map((l) => l.id));
+  const isNovo = softSubtab === "novos";
+  const fonte = isNovo ? (DATA.softwaresNovos || []) : (DATA.softwaresExistentes || []);
+  const buscaLow = Citem.swBusca.toLowerCase();
+  const rows = fonte.filter((s) => {
+    if (!labsOk.has(s.labId)) return false;
+    if (buscaLow && !s.nome.toLowerCase().includes(buscaLow)) return false;
+    if (!inRange(s.valor, Citem.swValor.min, Citem.swValor.max)) return false;
+    if (Citem.swComComent && !s.temComentario) return false;
+    return true;
+  });
+  if (!rows.length) { alert("Nenhum software nos filtros atuais para exportar."); return; }
+  const lab = (s) => labsById[s.labId] || {};
+  const base = [
+    { label: "Laboratório", get: (s) => lab(s).nome || s.labId },
+    { label: "Unidade", get: (s) => lab(s).unidade || "" },
+    { label: "Grande Área", get: (s) => lab(s).area || "" },
+    { label: "Localidade", get: (s) => lab(s).localidade || "" },
+    { label: "Software", get: (s) => s.nome },
+  ];
+  const cols = isNovo
+    ? base.concat([
+        { label: "Nº licenças", get: (s) => s.numLicencas },
+        { label: "Custo licenciamento (R$)", get: (s) => s.custoLicenciamento },
+        { label: "Custo atualização (R$)", get: (s) => s.custoAtualizacao },
+        { label: "Custo total (R$)", get: (s) => s.valor },
+        { label: "Comentários", get: (s) => s.comentarios },
+      ])
+    : base.concat([
+        { label: "Situação", get: (s) => s.situacao },
+        { label: "Nº licenças", get: (s) => s.numLicencas },
+        { label: "Vigência", get: (s) => s.vigencia },
+        { label: "Custo licenciamento (R$)", get: (s) => s.custoLicenciamento },
+        { label: "Custo atualização (R$)", get: (s) => s.custoAtualizacao },
+        { label: "Custo aquisição (R$)", get: (s) => s.custoAquisicao },
+        { label: "Custo renovação (R$)", get: (s) => s.custoRenovacao },
+        { label: "Custo total (R$)", get: (s) => s.valor },
+        { label: "Comentários", get: (s) => s.comentarios },
+      ]);
+  downloadCsv(`softwares-${isNovo ? "novos" : "existentes"}.csv`, cols, rows);
+}
+
 /* ============================================================ abas */
 function wireTabs() {
   const tabs = [...document.querySelectorAll('.tablist [role="tab"]')];
@@ -1595,6 +2220,40 @@ function wireTabs() {
     });
   });
 
+  // visões da infraestrutura (Instalações / Resíduos / ... / Notas)
+  document.querySelectorAll("#tab-infra .subtab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#tab-infra .subtab").forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+        b.tabIndex = on ? 0 : -1;
+      });
+      infraView = btn.dataset.infraview;
+      const panel = document.getElementById("infra-panel");
+      if (panel) panel.setAttribute("aria-labelledby", btn.id);
+      const def = INFRA_VIEWS[infraView].defaultSort;
+      infraSort.key = def.key; infraSort.dir = def.dir;
+      renderInfra();
+    });
+  });
+
+  // sub-abas de softwares (Existentes / Novos)
+  document.querySelectorAll("#tab-soft .subtab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#tab-soft .subtab").forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+        b.tabIndex = on ? 0 : -1;
+      });
+      softSubtab = btn.dataset.softtab;
+      const panel = document.getElementById("soft-panel");
+      if (panel) panel.setAttribute("aria-labelledby", btn.id);
+      renderSoftware();
+    });
+  });
+
   // visões da distribuição (Lista definitiva / Ajustar seleção)
   document.querySelectorAll("#tab-dist .subtab").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1616,6 +2275,118 @@ function courseList(csvText) {
   const items = csvText.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
   if (items.length <= 1) return `<p>${esc(csvText)}</p>`;
   return `<ul class="course-list">${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
+}
+
+/* card da Nota com o detalhamento das penalidades (igual à medida DAX do Power BI) */
+function notaCardHTML(l) {
+  const f2 = (v) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (!l.notaValida) {
+    return `<div class="nota-card"><div class="nota-score"><div class="big na" style="color:var(--faint)">—</div>` +
+      `<div class="scale">Nota 0–10</div></div><div class="nota-detail">` +
+      `<p class="nota-na">Laboratório sem respostas de infraestrutura no levantamento de 2024 — não avaliado.</p>` +
+      `</div></div>`;
+  }
+  const n = l.nota;
+  const cls = n >= 8 ? "ok" : n >= 5 ? "warn" : "bad";
+  const media = (DATA.meta.mediaNotaPorUnidade || {})[l.unidade];
+  const totalPen = Math.round((10 - n) * 100) / 100;
+  const rows = l.infra.notaBreakdown.map((b) => {
+    const on = b.penalidade > 0;
+    return `<tr class="${on ? "on" : "off"}"><td>${esc(b.criterio)}</td>` +
+      `<td class="pen">${on ? "−" + f2(b.penalidade) : "0"}</td></tr>`;
+  }).join("");
+  return `<div class="nota-card">` +
+    `<div class="nota-score"><div class="big ${cls}">${f2(n)}</div><div class="scale">Nota 0–10</div>` +
+    (media != null ? `<div class="media">média da unidade: ${f2(media)}</div>` : "") + `</div>` +
+    `<div class="nota-detail"><h4>Como a Nota é calculada — 10 menos as penalidades</h4>` +
+    `<table class="nota-breakdown"><tbody>${rows}` +
+    `<tr class="total"><td>Nota = 10 − ${f2(totalPen)}</td><td class="pen">${f2(n)}</td></tr>` +
+    `</tbody></table></div></div>`;
+}
+
+/* seções de infraestrutura/condições do laboratório (dossiê completo) */
+function infraSectionsHTML(l) {
+  const inf = l.infra;
+  const kv = (label, html) => `<div><b>${esc(label)}</b>${html}</div>`;
+  const naoVazio = (s, ...ignore) => s && s.trim() && !ignore.includes(s.trim());
+  const desc = (label, s, ...ignore) =>
+    naoVazio(s, ...ignore) ? `<p class="infra-desc"><b>${esc(label)}</b> ${esc(s)}</p>` : "";
+  let h = "";
+
+  h += `<div class="lab-section"><h4>Instalações e redes</h4><div class="infra-grid">` +
+    kv("Tomadas suficientes", infBadge(inf.tomadas, "pos")) +
+    kv("Iluminação suficiente", infBadge(inf.iluminacao, "pos")) +
+    kv("Ar-condicionado", infBadge(inf.arCondicionado, "pos")) +
+    kv("Fica dentro da unidade", infBadge(inf.ficaDentroUnidade, "pos")) +
+    kv("Wi-Fi própria", infBadge(inf.wifi, "pos")) +
+    kv("Rede eduroam", infBadge(inf.eduroam, "pos")) +
+    kv("Risco à segurança física (0–10)", riscoCell(inf.riscoFisico)) +
+    kv("Risco à segurança patrimonial (0–10)", riscoCell(inf.riscoPatrimonial)) +
+    `</div>` + desc("Sobre os riscos:", inf.riscosDescricao) + `</div>`;
+
+  h += `<div class="lab-section"><h4>Descarte de resíduos</h4><div class="infra-grid">` +
+    kv("Descarte de líquidos adequado", infBadge(inf.residuoLiquidoAdequado, "pos")) +
+    kv("Descarte de sólidos adequado", infBadge(inf.residuoSolidoAdequado, "pos")) +
+    `</div>` +
+    desc("Resíduos líquidos:", inf.residuoLiquidoLista) +
+    desc("Resíduos sólidos:", inf.residuoSolidoLista) + `</div>`;
+
+  h += `<div class="lab-section"><h4>Acessibilidade e adequação predial</h4><div class="infra-grid">` +
+    kv("Necessita acessibilidade (PcD)", infBadge(inf.necessitaAcessibilidade, "neg")) +
+    kv("Necessita adequação predial", infBadge(inf.necessitaPredial, "neg")) +
+    `</div>` +
+    desc("Acessibilidade:", inf.acessibilidadeDescricao) +
+    desc("Adequação predial:", inf.predialDescricao) + `</div>`;
+
+  h += `<div class="lab-section"><h4>Mobiliário</h4><div class="infra-grid">` +
+    kv("Quantidade suficiente", infBadge(inf.mobiliarioSuficiente, "pos")) +
+    kv("Em boas condições", infBadge(inf.mobiliarioCondicoes, "pos")) +
+    kv("Custo estimado (manut./aquis.)", moneyCell(inf.custoMobiliario)) +
+    `</div>` +
+    desc("Sobre a quantidade:", inf.mobiliarioSuficienteDescricao) +
+    desc("Sobre as condições:", inf.mobiliarioCondicoesDescricao, "Sem comentários") +
+    desc("Comentários:", inf.mobiliarioComentarios, "Sem comentários") + `</div>`;
+
+  h += `<div class="lab-section"><h4>Obras e expansão</h4><div class="infra-grid">` +
+    kv("Necessita expansão / novos espaços", infBadge(inf.necessitaExpansao, "neg")) +
+    kv("Custo de obras", moneyCell(inf.custoObras)) +
+    kv("Custo de mobiliário novo", moneyCell(inf.custoMobiliarioNovo)) +
+    `</div>` +
+    desc("Tipo:", inf.expansaoTipo, "Não há necessidade") +
+    desc("Descrição:", inf.expansaoDescricao, "Não há necessidade", "Não se aplica.", "Não se aplica") + `</div>`;
+
+  h += desc("Comentários gerais (infraestrutura):", inf.comentariosInfra);
+  return h;
+}
+
+/* seção de softwares do laboratório no modal */
+function softwaresSectionHTML(labId) {
+  const sw = swPorLab[labId] || { existentes: [], novos: [] };
+  if (!sw.existentes.length && !sw.novos.length) return "";
+  const tbl = (heads, rows) => {
+    const ths = heads.map((h) => `<th class="${h.cls || ""}">${esc(h.label)}</th>`).join("");
+    return `<div class="table-card"><div class="table-wrap"><table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  };
+  let h = "";
+  if (sw.existentes.length) {
+    const tot = sw.existentes.reduce((s, x) => s + (x.valor || 0), 0);
+    const rows = sw.existentes.map((s) =>
+      `<tr><td>${esc(s.nome)}</td><td>${cellText(s.situacao)}</td><td>${cellText(s.numLicencas)}</td>` +
+      `<td>${cellText(s.vigencia)}</td><td class="num">${moneyCell(s.valor)}</td><td>${cellText(s.comentarios)}</td></tr>`).join("");
+    h += `<h3>Softwares existentes<span class="badge">${sw.existentes.length}</span>` +
+      `<span class="h3-total">${fmtBRL(tot)}</span></h3>` +
+      tbl([{ label: "Software" }, { label: "Situação" }, { label: "Licenças" }, { label: "Vigência" }, { label: "Custo total (R$)", cls: "num" }, { label: "Comentários" }], rows);
+  }
+  if (sw.novos.length) {
+    const tot = sw.novos.reduce((s, x) => s + (x.valor || 0), 0);
+    const rows = sw.novos.map((s) =>
+      `<tr><td>${esc(s.nome)}</td><td>${cellText(s.numLicencas)}</td>` +
+      `<td class="num">${moneyCell(s.valor)}</td><td>${cellText(s.comentarios)}</td></tr>`).join("");
+    h += `<h3>Softwares a adquirir<span class="badge">${sw.novos.length}</span>` +
+      `<span class="h3-total">${fmtBRL(tot)}</span></h3>` +
+      tbl([{ label: "Software" }, { label: "Licenças" }, { label: "Custo total (R$)", cls: "num" }, { label: "Comentários" }], rows);
+  }
+  return h;
 }
 
 function openLab(labId, trigger) {
@@ -1677,12 +2448,17 @@ function openLab(labId, trigger) {
     `<div class="modal-stat-grid">${statGrid}</div>` +
     `<div class="lab-meta">${meta}</div>` +
     (l.comentarios ? `<p class="modal-note">"${esc(l.comentarios)}"</p>` : "") +
+    `<h3>Nota de infraestrutura</h3>` +
+    notaCardHTML(l) +
+    `<h3>Infraestrutura e condições do espaço</h3>` +
+    infraSectionsHTML(l) +
     `<h3>Equipamentos existentes que precisam de mais unidades` +
     `<span class="badge">${eq.existentes.length}</span><span class="h3-total">${fmtBRL(totExistVal)}</span></h3>` +
     sectionTable(existHead, existRows, "Nenhum equipamento existente registrado para este laboratório.") +
     `<h3>Novos equipamentos a adquirir` +
     `<span class="badge">${eq.novos.length}</span><span class="h3-total">${fmtBRL(totNovoVal)}</span></h3>` +
-    sectionTable(novoHead, novoRows, "Nenhum novo equipamento registrado para este laboratório.");
+    sectionTable(novoHead, novoRows, "Nenhum novo equipamento registrado para este laboratório.") +
+    softwaresSectionHTML(l.id);
 
   const modal = $("#modal");
   document.body.style.overflow = "hidden";

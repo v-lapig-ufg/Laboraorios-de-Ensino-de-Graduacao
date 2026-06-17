@@ -40,9 +40,20 @@
           <span class="tab-title">Equipamentos</span>
           <span class="tab-desc">Busque equipamentos por critérios de lab. e de item</span>
         </button>
-        <button class="tab" id="tabbtn-dist" role="tab" aria-selected="false" tabindex="-1"
+        <button class="tab" id="tabbtn-infra" role="tab" aria-selected="false" tabindex="-1"
+                aria-controls="tab-infra" data-tab="infra">
+          <span class="tab-title">Infraestrutura</span>
+          <span class="tab-desc">Condições, resíduos, acessibilidade e a Nota do laboratório</span>
+        </button>
+        <button class="tab" id="tabbtn-soft" role="tab" aria-selected="false" tabindex="-1"
+                aria-controls="tab-soft" data-tab="soft">
+          <span class="tab-title">Softwares</span>
+          <span class="tab-desc">Licenças e softwares por laboratório</span>
+        </button>
+        <button class="tab tab-featured" id="tabbtn-dist" role="tab" aria-selected="false" tabindex="-1"
                 aria-controls="tab-dist" data-tab="dist">
-          <span class="tab-title">Distribuição R$ 1,35 mi</span>
+          <span class="tab-title">Distribuição R$ 1,35 mi
+            <span class="tab-badge">★ interativa</span></span>
           <span class="tab-desc">Proposta de 1 equipamento por unidade acadêmica</span>
         </button>
       </div>
@@ -73,6 +84,7 @@
           <div class="results-head">
             <div class="results-line" id="lab-summary"></div>
             <span class="sort-hint" aria-hidden="true">↕ clique nos títulos para ordenar</span>
+            <button id="lab-export" class="btn-export" type="button" title="Baixar os laboratórios filtrados em CSV (abre no Excel)">⬇ Exportar CSV</button>
           </div>
           <div class="active-filters" id="lab-active" hidden aria-live="polite"></div>
           <div class="table-card">
@@ -90,6 +102,7 @@
                     <th data-sort="discentes" aria-sort="none" class="num" data-tip="Alunos atendidos por semestre · clique para ordenar">Alunos / sem. <span class="arrow" aria-hidden="true"></span></th>
                     <th data-sort="capacidade" aria-sort="none" class="num" data-tip="Capacidade máxima por turma prática · clique para ordenar">Capac. / turma <span class="arrow" aria-hidden="true"></span></th>
                     <th data-sort="nEquip" aria-sort="none" class="num" data-tip="Quantidade de equipamentos listados · clique para ordenar">Equip. <span class="arrow" aria-hidden="true"></span></th>
+                    <th data-sort="nota" aria-sort="none" class="num" data-tip="Nota de infraestrutura (0–10) · clique para ordenar">Nota <span class="arrow" aria-hidden="true"></span></th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -141,6 +154,7 @@
             </div>
             <div class="results-line" id="eq-summary"></div>
             <span class="sort-hint" aria-hidden="true">↕ clique nos títulos para ordenar</span>
+            <button id="eq-export" class="btn-export" type="button" title="Baixar os equipamentos filtrados em CSV (abre no Excel)">⬇ Exportar CSV</button>
           </div>
           <div class="active-filters" id="eq-active" hidden aria-live="polite"></div>
           <section id="eq-panel" role="tabpanel" aria-labelledby="subtab-existentes">
@@ -148,6 +162,115 @@
               <div class="table-wrap">
                 <table id="eq-table">
                   <caption class="sr-only">Lista de equipamentos filtrados</caption>
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ABA INFRAESTRUTURA ===================== -->
+    <section id="tab-infra" class="tab-panel" role="tabpanel"
+             aria-labelledby="tabbtn-infra" tabindex="0" hidden>
+      <p class="intro">
+        Condições físicas dos laboratórios apuradas no <strong>levantamento de 2024</strong>:
+        instalações e redes, riscos de segurança, descarte de resíduos, acessibilidade, mobiliário e
+        obras. A <strong>Nota (0–10)</strong> resume as condições de cada laboratório — clique em uma
+        linha para ver a <strong>história completa do laboratório</strong> e <strong>como a Nota é
+        calculada</strong>. Escolha o tema em “Visão”.
+      </p>
+
+      <div class="layout">
+        <aside class="filters" aria-label="Filtros de infraestrutura">
+          <div class="filters-head">
+            <h2>Filtros</h2>
+            <button class="filters-toggle" type="button" aria-expanded="true"
+                    aria-controls="infra-filters">Filtros <span class="filters-toggle-arrow" aria-hidden="true">▴</span></button>
+            <button id="infra-limpar" class="btn-clear" type="button">Limpar tudo</button>
+          </div>
+          <div id="infra-filters" class="filters-body"></div>
+        </aside>
+
+        <div class="results">
+          <div class="results-head">
+            <span class="subtabs-label">Visão:</span>
+            <div class="subtabs" role="tablist" aria-label="Tema da infraestrutura">
+              <button class="subtab active" id="infraview-instalacoes" role="tab" aria-selected="true"
+                      aria-controls="infra-panel" data-infraview="instalacoes">Instalações &amp; Redes</button>
+              <button class="subtab" id="infraview-residuos" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="infra-panel" data-infraview="residuos">Resíduos</button>
+              <button class="subtab" id="infraview-acessibilidade" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="infra-panel" data-infraview="acessibilidade">Acessibilidade &amp; Predial</button>
+              <button class="subtab" id="infraview-mobiliario" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="infra-panel" data-infraview="mobiliario">Mobiliário</button>
+              <button class="subtab" id="infraview-obras" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="infra-panel" data-infraview="obras">Obras / Futuros</button>
+              <button class="subtab" id="infraview-notas" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="infra-panel" data-infraview="notas">Notas (ranking)</button>
+            </div>
+            <div class="results-line" id="infra-summary"></div>
+            <span class="sort-hint" aria-hidden="true">↕ clique nos títulos para ordenar</span>
+            <button id="infra-export" class="btn-export" type="button" title="Baixar os laboratórios filtrados (com infraestrutura e Nota) em CSV (abre no Excel)">⬇ Exportar CSV</button>
+          </div>
+          <div class="active-filters" id="infra-active" hidden aria-live="polite"></div>
+          <section id="infra-panel" role="tabpanel" aria-labelledby="infraview-instalacoes">
+            <div class="table-card">
+              <div class="table-wrap">
+                <table id="infra-table">
+                  <caption class="sr-only">Lista de laboratórios por critérios de infraestrutura</caption>
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ABA SOFTWARES ===================== -->
+    <section id="tab-soft" class="tab-panel" role="tabpanel"
+             aria-labelledby="tabbtn-soft" tabindex="0" hidden>
+      <p class="intro">
+        Softwares e licenças apontados pelos laboratórios no <strong>levantamento de 2024</strong>,
+        em dois tipos: <strong>existentes</strong> (já em uso) e <strong>novos</strong> (a adquirir).
+        Filtre por critérios de laboratório e de software à esquerda e escolha o tipo em “Tipo de
+        software”.
+      </p>
+
+      <div class="layout">
+        <aside class="filters" aria-label="Filtros de software">
+          <div class="filters-head">
+            <h2>Filtros</h2>
+            <button class="filters-toggle" type="button" aria-expanded="true"
+                    aria-controls="soft-filters">Filtros <span class="filters-toggle-arrow" aria-hidden="true">▴</span></button>
+            <button id="soft-limpar" class="btn-clear" type="button">Limpar tudo</button>
+          </div>
+          <div id="soft-filters" class="filters-body"></div>
+        </aside>
+
+        <div class="results">
+          <div class="results-head">
+            <span class="subtabs-label">Tipo de software:</span>
+            <div class="subtabs" role="tablist" aria-label="Tipo de software">
+              <button class="subtab active" id="softtab-existentes" role="tab" aria-selected="true"
+                      aria-controls="soft-panel" data-softtab="existentes">Existentes</button>
+              <button class="subtab" id="softtab-novos" role="tab" aria-selected="false" tabindex="-1"
+                      aria-controls="soft-panel" data-softtab="novos">Novos (a adquirir)</button>
+            </div>
+            <div class="results-line" id="soft-summary"></div>
+            <span class="sort-hint" aria-hidden="true">↕ clique nos títulos para ordenar</span>
+            <button id="soft-export" class="btn-export" type="button" title="Baixar os softwares filtrados em CSV (abre no Excel)">⬇ Exportar CSV</button>
+          </div>
+          <div class="active-filters" id="soft-active" hidden aria-live="polite"></div>
+          <section id="soft-panel" role="tabpanel" aria-labelledby="softtab-existentes">
+            <div class="table-card">
+              <div class="table-wrap">
+                <table id="soft-table">
+                  <caption class="sr-only">Lista de softwares filtrados</caption>
                   <thead></thead>
                   <tbody></tbody>
                 </table>
