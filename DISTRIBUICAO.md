@@ -1,4 +1,4 @@
-# Aba "Distribuição R$ 1,2 mi" — documentação técnica
+# Aba "Distribuição R$ 1,35 mi" — documentação técnica
 
 > Documento para humanos **e outras IAs** que forem mexer nesta funcionalidade.
 > Para a visão geral do projeto (pipeline de dados, arquitetura, convenções),
@@ -10,10 +10,12 @@
 
 ## 1. Para que serve
 
-Um edital do MEC reparte **R$ 1.200.000** entre as **31 unidades acadêmicas** da
+Um edital do MEC reparte **R$ 1.350.000** entre as **31 unidades acadêmicas** da
 UFG. A meta é apoiar **um equipamento de maior porte por unidade** (em vez de
-pulverizar o recurso em itens pequenos). Esta aba ajuda a montar e justificar
-essa proposta de distribuição a partir dos dados do levantamento de 2024.
+pulverizar o recurso em itens pequenos), com um **2º equipamento** para unidades
+subatendidas de grande público via redistribuição da sobra. Esta aba ajuda a
+montar e justificar essa proposta de distribuição a partir dos dados do
+levantamento de 2024.
 
 A aba tem **duas visões** (sub-abas):
 
@@ -83,7 +85,7 @@ selo **prioritário** na UI.
 
 ### 3.3 Qual item dentro do laboratório
 O **item de MAIOR valor** dentro do teto (desempate: melhor documentado). Isso
-concentra a verba em equipamentos de maior porte e aproxima o gasto de R$ 1,2 mi.
+concentra a verba em equipamentos de maior porte e aproxima o gasto da verba.
 Está no `sort` de `distSuggest()`:
 ```js
 ops.sort((a, b) => b.e.valor - a.e.valor || distDoc(b.e) - distDoc(a.e));
@@ -126,22 +128,28 @@ distRedistribuicao(sel);
 ```
 
 ### 3.6 Redistribuição da sobra (`distRedistribuicao`)
-Após a proposta base (1 item por unidade), 5 equipamentos essenciais são
+Após a proposta base (1 item por unidade), 10 equipamentos essenciais são
 adicionados manualmente a unidades subatendidas, com base no impacto pedagógico —
 não apenas no valor, mas na relevância para a graduação. A escolha é registrada em
 `DIST_REDIST_OVERRIDES` com o motivo de cada item (tooltip no selo "redistribuição").
 
 | unidade | item | valor | motivo |
 |---|---|---|---|
-| ICB | Câmara de pressão de Scholander (troca: Microscópio) | R$ 60 mil | Fisiologia vegetal/animal; 250 alunos, licenciatura |
+| ICB | Câmara de pressão de Scholander | R$ 60 mil | Fisiologia vegetal/animal; 250 alunos, licenciatura (2º item; soma ao microscópio base de 800 alunos) |
 | FEFD | Esteira ergométrica X-4.6TSI | R$ 86 mil | Avaliação física; 120 alunos, licenciatura |
 | EVZ | Ultrafreezer -80°C | R$ 48 mil | Preservação de amostras biológicas; 100 alunos |
 | IESA | Microscópio petrográfico | R$ 57 mil | Geociências; 200 alunos, licenciatura |
 | EECA | Prensa de cisalhamento direto | R$ 120 mil | Mecânica dos solos; 135 alunos |
+| FF | Espectrofotômetro leitor de placas | R$ 30 mil | Ensaios de absorbância em microplaca (ELISA, dosagem enzimática); 80 alunos; 2º item da Farmácia |
+| IQ | Fotômetro de chama | R$ 50 mil | Química analítica (técnica distinta do UV-VIS já contemplado); 2º item, licenciatura |
+| IPTSP | Câmera acoplada ao microscópio | R$ 22 mil | Captura/projeta lâminas para toda a turma; complementa o microscópio base; 150 alunos, licenciatura |
+| EMAC | Mesa de luz cênica | R$ 20 mil | Operação de luz cênica — fundamental para as aulas práticas de teatro; 100 alunos, licenciatura |
+| EA | Centrífuga de bancada p/ alimentos | R$ 27 mil | Separação/clarificação em tecnologia de alimentos; 90 alunos; 2º item da EA |
 
-Para itens com `swap`, o item original da unidade é removido e substituído.
-Para itens sem `swap`, é adicionado como 2º equipamento da unidade.
-Itens adicionados pela redistribuição recebem o selo **"redistribuição"** na tabela.
+O mecanismo de `swap` (remover o item base da unidade e substituí-lo) continua
+disponível, mas **nenhum item o usa atualmente** — todos os 10 são adicionados como
+**2º equipamento** da unidade. Itens adicionados pela redistribuição recebem o selo
+**"redistribuição"** na tabela.
 
 ---
 
@@ -173,14 +181,14 @@ a regra "equipamento caro deve servir muitos alunos" depende desse número, ele 
 ### Constantes (topo do arquivo, ~linhas 18–80)
 | símbolo | o que é |
 |---|---|
-| `DIST_VERBA` | 1.200.000 |
+| `DIST_VERBA` | 1.350.000 |
 | `DIST_MIN` | 20.000 (mínimo do item) |
 | `DIST_TETO` | 150.000 (teto do item) |
 | `DIST_FATOR_TURMAS` | 25 (validação alunos×capacidade) |
-| `DIST_REDIST_MAX` | 5 (máx. de itens na redistribuição — reserva, não usado pelo algoritmo) |
+| `DIST_REDIST_MAX` | 10 (máx. de itens na redistribuição — reserva, não usado pelo algoritmo) |
 | `DIST_REDIST_MIN` | 25.000 (valor mínimo p/ item da redistribuição — reserva) |
 | `DIST_REDIST_TETO` | 150.000 (valor máximo p/ item da redistribuição — reserva) |
-| `DIST_REDIST_OVERRIDES` | 5 itens de redistribuição escolhidos manualmente (`{key, swap?, motivo}`) |
+| `DIST_REDIST_OVERRIDES` | 10 itens de redistribuição escolhidos manualmente (`{key, swap?, motivo}`) |
 | `DIST_LS` | chave do `localStorage` (**versionada** — ver §7) |
 | `DIST_MANUAIS` | overrides manuais (unidade → `{key, motivo}`) |
 | `DIST_AJUSTES` | derivado de `DIST_MANUAIS` (`chave → motivo`) |
@@ -262,7 +270,7 @@ atendidas, Laboratórios, Cursos e "Atendimentos de alunos/sem." (rotulado
   versão** (ex.: `v7` → `v8`). Sem isso, o navegador do usuário continua carregando
   a seleção **antiga** salva, e ele não vê a mudança. Histórico das versões:
   `v4` lista curada à mão · `v5` FM/FH "sob análise" · `v6` regerada por critérios
-  + FEN manual · `v7` teto 150k + item de maior valor + alunos validados · `v8` vetos + ajustes manuais EVZ/FEFD/FL + redistribuição da sobra · `v9` redistribuição limitada a 4 itens de R$ 30k–100k · `v10` redistribuição ampliada · `v11` 4 itens de redistribuição escolhidos manualmente (ICB câmara, FEFD esteira, EMAC cortina, EVZ ultrafreezer) · `v12` 5 itens manuais (ICB câmara, FEFD esteira, EVZ ultrafreezer, IESA microscópio petrográfico, EECA prensa); coluna custo/aluno removida; Pro Display XDR vetado.
+  + FEN manual · `v7` teto 150k + item de maior valor + alunos validados · `v8` vetos + ajustes manuais EVZ/FEFD/FL + redistribuição da sobra · `v9` redistribuição limitada a 4 itens de R$ 30k–100k · `v10` redistribuição ampliada · `v11` 4 itens de redistribuição escolhidos manualmente (ICB câmara, FEFD esteira, EMAC cortina, EVZ ultrafreezer) · `v12` 5 itens manuais (ICB câmara, FEFD esteira, EVZ ultrafreezer, IESA microscópio petrográfico, EECA prensa); coluna custo/aluno removida; Pro Display XDR vetado · `v13` verba ampliada para R$ 1,35 mi; redistribuição passa a 8 itens — ICB deixa de fazer swap (câmara vira 2º item, somada ao microscópio base) e entram FF (espectrofotômetro UV), IQ (fotômetro de chama) e IPTSP (2º microscópio trinocular). Total ≈ R$ 1,331 mi, saldo ≈ R$ 19 mil · `v14` no IPTSP a câmera (R$ 22 mil, acoplada ao microscópio base) substitui o 2º microscópio, e entra a EMAC (mesa de luz cênica, R$ 20 mil) como 9º item da redistribuição. 9 unidades com 2 itens; total ≈ R$ 1,333 mi, saldo ≈ R$ 17 mil · `v15` na FF o **espectrofotômetro leitor de placas** (R$ 30 mil, 80 alunos) substitui o de UV com varredura, e entra a **EA** (centrífuga de bancada p/ alimentos, R$ 27 mil, 90 alunos) como 10º item — bancada técnica para uma unidade ainda sem 2º item. 10 unidades com 2 itens; total ≈ R$ 1,345 mi, saldo ≈ R$ 5 mil.
 - Botões: **"Restaurar proposta"** (`distProposta()`), **"Desmarcar tudo"**,
   **"Exportar seleção (CSV)"**.
 
@@ -317,18 +325,37 @@ atendidas, Laboratórios, Cursos e "Atendimentos de alunos/sem." (rotulado
   querendo incluí-la (decisão registrada, não automática).
 - **FD excluída:** demanda registrada como **lote único** (qtd 0, R$ 250 mil),
   sem itens individualizados para avaliar.
-- **Teto 120k → 150k e "item mais caro":** para aproximar o gasto de R$ 1,2 mi
-  (passou de ~R$ 686 mil para ~R$ 1,055 mi em 19 unidades).
-- **Redistribuição da sobra (v12):** a proposta base (1 item por unidade) deixava
-  R$ 375 mil de saldo. Em vez de algoritmo automático, 5 equipamentos essenciais foram
-  escolhidos manualmente com base no impacto pedagógico: ICB (câmara de pressão de
-  Scholander, R$ 60 mil — fisiologia, 250 alunos, licenciatura), FEFD (esteira ergométrica,
+- **Teto 120k → 150k e "item mais caro":** para aproximar o gasto da verba
+  (passou de ~R$ 686 mil para ~R$ 825 mil na base de 19 unidades).
+- **Verba R$ 1,2 mi → R$ 1,35 mi (v13):** recálculo do edital. Os parâmetros e a
+  metodologia continuam idênticos; a verba extra foi usada para **ampliar a
+  redistribuição**, dando um **2º equipamento** a unidades de grande público em
+  ciências básicas que só tinham um item modesto na base: **ICB**, **FF**, **IQ** e
+  **IPTSP**. A ICB deixou de **trocar** (swap) o microscópio pela câmara de
+  Scholander — agora fica com **os dois** (microscópio base de 800 alunos + câmara).
+- **Redistribuição da sobra (v12→v13):** a proposta base (1 item por unidade) deixava
+  grande saldo. Em vez de algoritmo automático, os equipamentos foram escolhidos
+  manualmente com base no impacto pedagógico. Os 5 da v12: FEFD (esteira ergométrica,
   R$ 86 mil — avaliação física, 120 alunos, licenciatura), EVZ (ultrafreezer -80°C,
   R$ 48 mil — preservação de amostras biológicas, 100 alunos), IESA (microscópio
   petrográfico, R$ 57 mil — geociências, 200 alunos, licenciatura), EECA (prensa de
-  cisalhamento direto, R$ 120 mil — mecânica dos solos, 135 alunos). A ICB troca o
-  microscópio pela câmara; as demais recebem um 2º item. Cada item tem motivo registrado
-  (tooltip no selo "redistribuição"). Saldo final ≈ R$ 24 mil.
+  cisalhamento direto, R$ 120 mil — mecânica dos solos, 135 alunos) e ICB (câmara de
+  pressão de Scholander, R$ 60 mil — fisiologia, 250 alunos, licenciatura). Na **v13**,
+  com a verba em R$ 1,35 mi, entraram mais 3 — **FF** (espectrofotômetro UV com varredura,
+  R$ 45 mil — doseamento de fármacos), **IQ** (fotômetro de chama, R$ 50 mil — química
+  analítica, técnica distinta do UV-VIS já contemplado) e **IPTSP** (2º microscópio
+  trinocular — dobra a capacidade de microscopia) — e a ICB passou a manter
+  microscópio base **e** câmara (sem swap). Na **v14**, a pedido do usuário, o 2º item do
+  IPTSP virou a **câmera** (R$ 22 mil, acoplada ao microscópio base — captura/projeta as
+  lâminas para a turma) no lugar do 2º microscópio, e entrou a **EMAC** (mesa de luz
+  cênica, R$ 20 mil — equipamento fundamental para as aulas práticas de teatro, 100 alunos,
+  licenciatura), por ser uma unidade ainda sem 2º item e com item bem documentado. Na
+  **v15**, a pedido do usuário, o 2º item da FF passou do espectrofotômetro UV com
+  varredura para o **leitor de placas** (R$ 30 mil, 80 alunos — ensaios de absorbância em
+  microplaca), e o saldo liberado entrou como **EA** (centrífuga de bancada para alimentos,
+  R$ 27 mil, 90 alunos), preferida por ser "bancada técnica" com bom público entre as opções
+  de ~R$ 30 mil disponíveis. Cada item tem motivo registrado (tooltip no selo
+  "redistribuição"). Total ≈ R$ 1,345 mi; saldo final ≈ R$ 5 mil; 10 unidades com 2 equipamentos.
 - **Cortina de isolamento acústico (EMAC) removida:** envolve mão de obra e manutenção,
   não é equipamento autônomo. Substituída pelo microscópio petrográfico (IESA) e pela
   prensa de cisalhamento (EECA) para melhor aproveitamento da verba.

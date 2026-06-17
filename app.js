@@ -16,14 +16,14 @@ let eqItemControls = [];         // controles "critérios do equipamento" (aba E
 let distControls = [];           // controles da aba Distribuição
 
 /* aba Distribuição: verba a repartir entre as unidades acadêmicas */
-const DIST_VERBA = 1200000;      // verba total
+const DIST_VERBA = 1350000;      // verba total
 const DIST_MIN = 20000;          // custo total mínimo para o item ser elegível
 const DIST_TETO = 150000;        // teto por item (concentra a verba em equipamentos de maior porte)
 const DIST_FATOR_TURMAS = 25;    // máx. de "turmas/semestre" plausível p/ validar alunos vs capacidade
-const DIST_REDIST_MAX = 5;        // máx. de itens na redistribuição da sobra (reserva)
+const DIST_REDIST_MAX = 10;       // máx. de itens na redistribuição da sobra (reserva)
 const DIST_REDIST_MIN = 25000;     // valor mínimo para um item ser candidato à redistribuição (reserva)
 const DIST_REDIST_TETO = 150000;   // valor máximo para um item da redistribuição (reserva)
-const DIST_LS = "distSelecao.v12";// chave do localStorage com a seleção (v12: 5 itens manuais, sem custo/aluno)
+const DIST_LS = "distSelecao.v15";// chave do localStorage com a seleção (v15: FF leitor de placas + EA centrífuga de alimentos)
 let distItems = [];              // novos + existentes anotados { e, lab, key, tipo, qtd, elegivel }
 let distPorUnidade = new Map();  // unidade -> [itens]
 let distPrioLab = new Map();     // unidade -> labId prioritário (critérios da distribuição)
@@ -86,8 +86,7 @@ const DIST_VETADOS = {
 const DIST_REDIST_OVERRIDES = [
   {
     key: "LAB226|novo|Câmara de pressão ou câmara de Scholander|60000",
-    swap: "LAB234|existente|Microscópio com câmera acoplada|20000",
-    motivo: "Câmara de pressão de Scholander — equipamento central de fisiologia vegetal e animal; permite aulas práticas de respiração e fotossíntese para 250 alunos (licenciatura em Ciências Biológicas).",
+    motivo: "Câmara de pressão de Scholander — equipamento central de fisiologia vegetal e animal; permite aulas práticas de respiração e fotossíntese para 250 alunos (licenciatura em Ciências Biológicas). Soma-se ao microscópio com câmera acoplada (item base do ICB, que atende 800 alunos), dando à maior unidade de ciências biológicas dois equipamentos essenciais.",
   },
   {
     key: "LAB167|novo|X-4.6TSI\nESTEIRA X-4.6I SAC.TCH SCREEN 15\" INC -2% A 18%\nLONA 60CM – MOVEMENT -\nFAZ ATÉ  22km/h|85980",
@@ -104,6 +103,26 @@ const DIST_REDIST_OVERRIDES = [
   {
     key: "LAB028|existente|Prensa de Cisalhamento Direto|120000",
     motivo: "Prensa de cisalhamento direto — equipamento central de mecânica dos solos para Engenharia Civil; ensaio de cisalhamento é a prática mais importante de geotecnia (135 alunos).",
+  },
+  {
+    key: "LAB182|novo|Espectrofotômetro Leitor de Placas|30000",
+    motivo: "Espectrofotômetro leitor de placas (microplacas) — instrumento de bancada essencial para ensaios de absorbância em larga escala (dosagem enzimática, ELISA, viabilidade celular) nas práticas de análise farmacêutica e bioquímica. Como 2º equipamento da FF, atende o laboratório de práticas farmacêuticas (80 alunos/sem.).",
+  },
+  {
+    key: "LAB310|existente|Fotômetro de Chama|50000",
+    motivo: "Fotômetro de chama — instrumento clássico da química analítica (determinação de sódio, potássio e cálcio por emissão), técnica distinta do espectrofotômetro UV-VIS já contemplado. Como 2º equipamento do IQ, amplia a cobertura de técnicas analíticas no ensino de graduação em Química (licenciatura).",
+  },
+  {
+    key: "LAB290|existente|Câmera|22000",
+    motivo: "Câmera acoplada ao microscópio — captura e projeta as imagens das lâminas para toda a turma, transformando a aula de microscopia (histologia, parasitologia) de observação individual em demonstração coletiva (150 alunos, licenciatura). Complementa o microscópio do laboratório base do IPTSP.",
+  },
+  {
+    key: "LAB044|novo|Mesa de luz|20000",
+    motivo: "Mesa de operação de luz cênica — equipamento fundamental do Laboratório de Montagens Cênicas e Teatro-Educação (EMAC) para as aulas práticas de apresentações teatrais; sem ela não se ensina o desenho e a operação de iluminação, parte central da formação em Artes Cênicas (100 alunos, licenciatura).",
+  },
+  {
+    key: "LAB016|novo|Centrífuga para alimentos.|27000",
+    motivo: "Centrífuga de bancada em aço inoxidável para processamento de alimentos — equipamento técnico central do Laboratório de Vegetais e Derivados (EA) para as práticas de separação, clarificação e extração em engenharia/tecnologia de alimentos (90 alunos/sem.). Como 2º equipamento da EA, complementa a envasadora do item base.",
   },
 ];
 
@@ -1037,7 +1056,7 @@ function saveDistSel() {
    em cada unidade, escolhe o laboratório prioritário (cmpPrioLab) que tenha
    item elegível dentro do teto e, nele, o item de MAIOR valor dentro do teto
    (desempate pela melhor documentação). Concentrar a verba no equipamento de
-   maior porte que o laboratório pediu aproxima o gasto dos R$ 1,2 milhão e usa
+   maior porte que o laboratório pediu aproxima o gasto dos R$ 1,35 milhão e usa
    o teto mais alto. Itens acima do teto ficam para decisão manual. */
 function distSuggest() {
   const sel = new Set();
@@ -1209,12 +1228,12 @@ function distMetodologiaCard() {
   card.innerHTML =
     `<h3>Como esta lista foi montada</h3>` +
     `<ul>` +
-    `<li>O edital reparte <strong>R$ 1,2 milhão</strong> entre as unidades acadêmicas. A prioridade é concentrar o recurso em <strong>equipamentos de maior porte</strong> (em vez de pulverizá-lo) — conforme orientação do MEC.</li>` +
+    `<li>O edital reparte <strong>R$ 1,35 milhão</strong> entre as unidades acadêmicas. A prioridade é concentrar o recurso em <strong>equipamentos de maior porte</strong> (em vez de pulverizá-lo) — conforme orientação do MEC.</li>` +
     `<li><strong>Quais itens entram (elegibilidade):</strong> apenas equipamentos com <strong>quantidade solicitada igual a 1</strong> e <strong>custo total entre R$ 20 mil e R$ 150 mil</strong> (o teto por item evita que uma só unidade consuma a verba). Itens vetados (veículos, pacotes multi-equipamento e descrições placeholder) ficam de fora.</li>` +
     `<li><strong>Qual laboratório de cada unidade é escolhido:</strong> entre os que têm item elegível, a prioridade é, <strong>antes de tudo, atender cursos de licenciatura</strong>; em seguida, ter mais alunos por semestre, atender mais cursos e atender mais cursos de outras unidades. O laboratório priorizado recebe o selo <span class="badge prio">prioritário</span>.</li>` +
-    `<li><strong>Qual item dentro do laboratório:</strong> o de <strong>maior valor dentro do teto</strong>, para que a verba seja usada em equipamentos de maior porte e o gasto total se aproxime dos R$ 1,2 milhão.</li>` +
+    `<li><strong>Qual item dentro do laboratório:</strong> o de <strong>maior valor dentro do teto</strong>, para que a verba seja usada em equipamentos de maior porte e o gasto total se aproxime dos R$ 1,35 milhão.</li>` +
     `<li><strong>Ajustes manuais:</strong> quando o item escolhido automaticamente não se enquadra no edital (veículo, pacote multi-equipamento etc.), ele é trocado à mão. Há <strong>${fmtNum(nManuais)} ajustes</strong>, marcados com o selo <span class="badge ajuste">ajuste manual</span> — passe o mouse sobre o selo para ver o motivo.</li>` +
-    `<li><strong>Redistribuição da sobra:</strong> após a proposta base (1 item por unidade), <strong>${fmtNum(DIST_REDIST_OVERRIDES.length)} equipamentos essenciais</strong> foram escolhidos manualmente para unidades subatendidas, com base no impacto pedagógico — não apenas no valor, mas na relevância para a graduação. Cada item tem um motivo registrado (passe o mouse sobre o selo <span class="badge redist">redistribuição</span>). A ICB troca o microscópio pela câmara de pressão de Scholander; as demais unidades recebem um 2º equipamento.</li>` +
+    `<li><strong>Redistribuição da sobra:</strong> após a proposta base (1 item por unidade), <strong>${fmtNum(DIST_REDIST_OVERRIDES.length)} equipamentos essenciais</strong> foram escolhidos manualmente para unidades subatendidas, com base no impacto pedagógico — não apenas no valor, mas na relevância para a graduação. Cada item tem um motivo registrado (passe o mouse sobre o selo <span class="badge redist">redistribuição</span>). Essas unidades — incluindo as de maior público em ciências básicas, como <strong>ICB, FF, IQ e IPTSP</strong> — passam a contar com um <strong>2º equipamento</strong>.</li>` +
     `<li><strong>Equipamento caro tem que servir muitos alunos — com o dado conferido:</strong> como o levantamento traz inconsistências, o número de alunos é <strong>conferido contra a capacidade por turma</strong>: um valor implausível não ganha prioridade e recebe o selo <span class="badge chk">conferir alunos</span>.</li>` +
     `<li><strong>Quem fica de fora:</strong> unidades sem nenhum item dentro desses critérios, ou barradas na análise (por exemplo, valor irreal ou só itens acima do teto), aparecem na lista de <strong>não atendidas</strong> ao final, com o motivo de cada uma.</li>` +
     `</ul>` +
@@ -1527,7 +1546,7 @@ function exportDistCsv() {
   const blob = new Blob(["\ufeff" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = el("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "distribuicao-equipamentos-1200000.csv";
+  a.download = "distribuicao-equipamentos-1350000.csv";
   document.body.appendChild(a);
   a.click();
   a.remove();
